@@ -156,23 +156,23 @@ public:
   rule (rule const & rhs) = default;
   rule (rule && rhs) noexcept = default;
 
-  rule & operator= (rule const & rhs) = delete;
-  rule & operator= (rule && rhs) noexcept = delete;
+  rule & operator= (rule const & rhs) = default;
+  rule & operator= (rule && rhs) noexcept = default;
 
-  template <typename MatchFunction, typename ActionFunction, typename = std::enable_if_t<std::is_invocable_v<MatchFunction, std::string_view> && std::is_invocable_v<ActionFunction, std::string_view>>>
+  template <typename MatchFunction, typename ActionFunction, typename = std::enable_if_t<std::is_invocable_v<MatchFunction, rule> && std::is_invocable_v<ActionFunction, std::string_view>>>
   rule concat (MatchFunction match, ActionFunction action) const {
     return concat_impl (match, action, false);
   }
-  template <typename MatchFunction, typename = std::enable_if_t<std::is_invocable_v<MatchFunction, std::string_view>>>
+  template <typename MatchFunction, typename = std::enable_if_t<std::is_invocable_v<MatchFunction, rule>>>
   rule concat (MatchFunction match) const {
     return concat(match, [] (std::string_view /*str*/) {/*nop*/});
   }
 
-  template <typename MatchFunction, typename ActionFunction, typename = std::enable_if_t<std::is_invocable_v<MatchFunction, std::string_view> && std::is_invocable_v<ActionFunction, std::string_view>>>
+  template <typename MatchFunction, typename ActionFunction, typename = std::enable_if_t<std::is_invocable_v<MatchFunction, rule> && std::is_invocable_v<ActionFunction, std::string_view>>>
   rule concat_opt (MatchFunction match, ActionFunction action) const {
     return concat_impl (match, action, true);
   }
-  template <typename MatchFunction, typename = std::enable_if_t<std::is_invocable_v<MatchFunction, std::string_view>>>
+  template <typename MatchFunction, typename = std::enable_if_t<std::is_invocable_v<MatchFunction, rule>>>
   rule concat_opt (MatchFunction match) const {
     return concat_opt (match, [] (std::string_view /*str*/) {/*nop*/});
   }
@@ -191,24 +191,14 @@ public:
   // Default values are 0 and infinity so that *<element> allows any number,
   // including zero; 1*<element> requires at least one; 3*3<element> allows
   // exactly 3 and 1*2<element> allows one or two.
-  template <typename MatchFunction, typename = std::enable_if_t<std::is_invocable_v<MatchFunction, std::string_view>>>
+  template <typename MatchFunction, typename = std::enable_if_t<std::is_invocable_v<MatchFunction, rule>>>
   rule star (MatchFunction match, unsigned min = 0, unsigned max = std::numeric_limits<unsigned>::max()) const;
 
 
 
   rule alternative () const { return rule{}; }
   template <typename MatchFunction, typename ...Rest>
-  rule alternative (MatchFunction match, Rest && ...rest) const {
-    if (!tail_) {
-      // If matching has already failed, then pass that condition down the chain.
-      return *this;
-    }
-    if (auto const m = match (*tail_)) {
-      return rule{tail_->substr (m->length())};
-    }
-    // This didn't match, so try the next one.
-    return this->alternative(std::forward<Rest> (rest)...);
-  }
+  rule alternative (MatchFunction match, Rest && ...rest) const;
 
 
   constexpr std::optional<std::string_view> tail () const { return tail_; }
@@ -221,12 +211,36 @@ public:
     return {};
   }
 
+  template <typename Predicate>
+  std::optional<std::string_view> single_char (Predicate pred) const {
+    auto const sv = this->tail();
+    if (sv && !sv->empty () && pred(sv->front())) {
+      return sv->substr(0,1);
+    }
+    return {};
+  }
+
 private:
   template <typename MatchFunction, typename ActionFunction>
   rule concat_impl (MatchFunction match, ActionFunction action, bool optional) const;
 
-  std::optional<std::string_view> const tail_;
+  std::optional<std::string_view> tail_;
 };
+
+// alternative
+// ~~~~~~~~~~~
+template <typename MatchFunction, typename ...Rest>
+rule rule::alternative (MatchFunction match, Rest && ...rest) const {
+  if (!tail_) {
+    // If matching has already failed, then pass that condition down the chain.
+    return *this;
+  }
+  if (auto const m = match (*this)) {
+    return rule{tail_->substr (m->length())};
+  }
+  // This didn't match, so try the next one.
+  return this->alternative(std::forward<Rest> (rest)...);
+}
 
 // star
 // ~~~~
@@ -240,7 +254,7 @@ rule rule::star (MatchFunction match, unsigned min, unsigned max) const {
   auto done = false;
   auto count = 0U;
   while (!done) {
-    auto const m = match (str);
+    auto const m = match (rule{str});
     if (!m) {
       break; // No match so no more repetitions.
     }
@@ -268,25 +282,26 @@ rule rule::concat_impl (MatchFunction match, ActionFunction action, bool optiona
     // If matching has already failed, then pass that condition down the chain.
     return *this;
   }
-  if (auto const m = match (*tail_)) {
+  if (auto const m = match (*this)) {
     action (*m);
     return rule{tail_->substr (m->length())};
   }
-  return optional ? rule{tail_} : rule{}; // Matching failed.
+  return optional ? *this : rule{}; // Matching failed.
 }
 
 
-
+decltype(auto) alpha (rule const r) {
+  return r.single_char ([] (char const c) { return std::isalpha (static_cast<int> (c)); });
+}
+decltype(auto) digit (rule const r) {
+  return r.single_char ([] (char c) { return std::isdigit (static_cast<int> (c)); });
+}
 
 // unreserved    = ALPHA / DIGIT / "-" / "." / "_" / "~"
-constexpr bool is_unreserved (char c) noexcept {
-  return std::isalnum (c) || c == '-' || c == '.' || c == '_' || c == '~';
-}
-std::optional<std::string_view> unreserved (std::string_view const in) {
-  if (!in.empty() && is_unreserved(in.front())) {
-    return in.substr(0, 1);
-  }
-  return {};
+std::optional<std::string_view> unreserved (rule const r) {
+  return r.single_char ([] (char const c) {
+    return std::isalnum (static_cast<int> (c)) || c == '-' || c == '.' || c == '_' || c == '~';
+  });
 }
 // gen-delims    = ":" / "/" / "?" / "#" / "[" / "]" / "@"
 constexpr bool is_gen_delim (char const c) noexcept {
@@ -297,11 +312,8 @@ constexpr bool is_gen_delim (char const c) noexcept {
 constexpr bool is_sub_delim (char const c) noexcept {
   return c == '!' || c == '$' || c == '&' || c == '\'' || c == '(' || c == ')' || c ==  '*' || c ==  '+' || c == ',' || c == ';' || c == '=';
 }
-std::optional<std::string_view> sub_delims (std::string_view const in) {
-  if (!in.empty() && is_sub_delim(in.front())) {
-    return in.substr(0, 1);
-  }
-  return {};
+std::optional<std::string_view> sub_delims (rule const r) {
+  return r.single_char (is_sub_delim);
 }
 
 // reserved      = gen-delims / sub-delims
@@ -309,46 +321,43 @@ constexpr bool is_reserved (char const c) {
   return is_gen_delim(c) || is_sub_delim(c);
 }
 // pct-encoded   = "%" HEXDIG HEXDIG
-std::optional<std::string_view> pct_encoded (std::string_view const in) {
-  if (in.length () >= 3 && in[0] == '%' && std::isxdigit(in[1]) && std::isxdigit(in[2])) {
-    return in.substr (0, 3);
+std::optional<std::string_view> pct_encoded (rule const r) {
+  auto const sv = r.tail();
+  if (sv.has_value() && sv->length () >= 3 && (*sv)[0] == '%' && std::isxdigit (static_cast<int> ((*sv)[1])) && std::isxdigit(static_cast<int> ((*sv)[2]))) {
+    return sv->substr (0, 3);
   }
   return {};
 }
 
-rule single_char_rule (rule in, char const c) {
-  return in.concat([c] (std::string_view const s) -> std::optional<std::string_view> {
-    if (!s.empty () && s.front() == c) {
-      return s.substr(0,1);
-    }
-    return {};
-  });
+
+decltype(auto) commercial_at (rule const r) {
+  return r.single_char ([] (char const c) { return c == '@'; });
+}
+decltype(auto) colon (rule const r) {
+  return r.single_char ([] (char const c) { return c == ':'; });
+}
+decltype(auto) hash (rule const r) {
+  return r.single_char ([] (char const c) { return c == '#'; });
+}
+decltype(auto) plus (rule const r) {
+  return r.single_char ([] (char const c) { return c == '+'; });
+}
+decltype(auto) minus (rule const r) {
+  return r.single_char ([] (char const c) { return c == '-'; });
+}
+decltype(auto) solidus (rule const r) {
+  return r.single_char ([] (char const c) { return c == '/'; });
+}
+decltype(auto) question_mark (rule const r) {
+  return r.single_char ([] (char const c) { return c == '?'; });
+}
+decltype(auto) full_stop (rule const r) {
+  return r.single_char ([] (char c) { return c == '.'; });
 }
 
-decltype(auto) commercial_at (std::string_view const in) {
-  rule const r{in};
-  return single_char_rule (r, '@').head(r);
-}
-decltype(auto) colon (std::string_view const in) {
-  rule const r{in};
-  return single_char_rule (r, ':').head(r);
-}
-decltype(auto) hash (std::string_view const in) {
-  rule const r{in};
-  return single_char_rule (r, '#').head(r);
-}
-decltype(auto) solidus (std::string_view const in) {
-  rule const r{in};
-  return single_char_rule (r, '/').head(r);
-}
-decltype(auto) question_mark (std::string_view const in) {
-  rule const r{in};
-  return single_char_rule (r, '?').head(r);
-}
 
 // pchar         = unreserved / pct-encoded / sub-delims / ":" / "@"
-std::optional<std::string_view> pchar (std::string_view const in) {
-  rule const r{in};
+std::optional<std::string_view> pchar (rule const r) {
   return r.alternative (unreserved, pct_encoded, sub_delims, colon, commercial_at).head(r);
 }
 //std::optional<std::string_view> pchar (rule const in) {
@@ -357,10 +366,8 @@ std::optional<std::string_view> pchar (std::string_view const in) {
 
 //authority     = [ userinfo "@" ] host [ ":" port ]
 //userinfo      = *( unreserved / pct-encoded / sub-delims / ":" )
-std::optional<std::string_view> userinfo_rule (std::string_view const in) {
-  rule const r{in};
-  return r.star ([] (std::string_view const str) {
-    rule const r2{str};
+std::optional<std::string_view> userinfo_rule (rule const r) {
+  return r.star ([] (rule const r2) {
     return r2.alternative (unreserved, pct_encoded, sub_delims, colon).head(r2);
   }).head(r);
 }
@@ -368,23 +375,20 @@ std::optional<std::string_view> userinfo_rule (std::string_view const in) {
 
 
 // scheme = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )
-std::optional<std::string_view> scheme (std::string_view const in) {
-  if (in.empty () || !std::isalpha(in.front())) {
-    return {};
-  }
-  auto pos = std::string_view::size_type{1};
-  auto const length = in.length ();
-  auto const is_part = [] (char c) { return std::isalnum(c) || c == '+' || c == '-' || c == '.'; };
-  for (; pos < length && is_part (in[pos]); ++pos) {
-  }
-  return in.substr (0, pos);
+std::optional<std::string_view> scheme (rule const r) {
+  return r
+    .concat (alpha)
+    .concat ([] (rule const r2) {
+      return r2.star ([] (rule const r3) {
+        return r3.alternative (alpha, digit, plus, minus, full_stop).head(r3);
+      }).head (r2);
+    })
+    .head(r);
 }
 
 // reg-name      = *( unreserved / pct-encoded / sub-delims )
-std::optional<std::string_view> reg_name_rule (std::string_view const in) {
-  rule const r{in};
-  return r.star ([] (std::string_view const str) {
-    rule const r2{str};
+std::optional<std::string_view> reg_name_rule (rule const r) {
+  return r.star ([] (rule const r2) {
     return r2.alternative (unreserved, pct_encoded, sub_delims).head(r2);
   }).head(r);
 }
@@ -392,13 +396,13 @@ std::optional<std::string_view> reg_name_rule (std::string_view const in) {
 
 
 // host          = IP-literal / IPv4address / reg-name
-std::optional<std::string_view> host_rule (std::string_view const in) {
-  auto r = reg_name_rule (in);
-  if (r) {
-    auto host = in.substr(0,r->length());
+std::optional<std::string_view> host_rule (rule const r) {
+  auto opt_sv = reg_name_rule (r);
+  if (opt_sv) {
+    auto host = *opt_sv;
 std::cout << "host: " << std::quoted(host) << '\n';
   }
-  return r;
+  return opt_sv;
 }
 
 // userinfo-at = userinfo "@"
@@ -410,38 +414,24 @@ std::cout << "userinfo: " << std::quoted(userinfo) << '\n';
     .concat(commercial_at);
 }
 
-rule digit (rule in) {
-  return in.concat([] (std::string_view const s) -> std::optional<std::string_view> {
-    if (!s.empty() && std::isdigit(s.front())) {
-      return s.substr(0,1);
-    }
-    return {};
-  });
-}
 
 // port          = *DIGIT
-std::optional<std::string_view> port (std::string_view const in) {
-  rule const r{in};
-  return r.star([] (std::string_view s) {
-    rule r2{s};
-    return digit(r2).head(r2);
-  }).head(r);
+std::optional<std::string_view> port (rule const r) {
+  return r.star(digit).head(r);
 }
 
 // colon-port = ":" port
-std::optional<std::string_view> colon_port (std::string_view const in) {
-  rule const r{in};
+std::optional<std::string_view> colon_port (rule const r) {
   return r.concat (colon).concat(port, [] (std::string_view const p) {
 std::cout << "port: " << std::quoted(p) << '\n';
   }).head(r);
 }
 
 //authority     = [ userinfo "@" ] host [ ":" port ]
-rule authority (rule in) {
-  return in
-    .concat_opt([] (std::string_view str) {
-      rule const r{str};
-      return userinfo_at (r).head (r);
+rule authority (rule const r) {
+  return r
+    .concat_opt([] (rule const r2) {
+      return userinfo_at (r2).head (r2);
     })
     .concat (host_rule)
     .concat_opt (colon_port);
@@ -449,33 +439,27 @@ rule authority (rule in) {
 
 
 //segment       = *pchar
-std::optional<std::string_view> segment (std::string_view const in) {
-  rule const r{in};
-  return r.star (pchar).head(r);
+std::optional<std::string_view> segment (rule const r) {
+  return r.star (pchar).head (r);
 }
 
 // segment-nz    = 1*pchar
-std::optional<std::string_view> segment_nz (std::string_view const in) {
-  rule const r{in};
-  return r.star (pchar, 1U).head(r);
+std::optional<std::string_view> segment_nz (rule const r) {
+  return r.star (pchar, 1U).head (r);
 }
 
 // segment-nz-nc = 1*( unreserved / pct-encoded / sub-delims / "@" )
 //                  ; non-zero-length segment without any colon ":"
-std::optional<std::string_view> segment_nz_nc (std::string_view const in) {
-  rule const r{in};
-  return r.star ([] (std::string_view const str) {
-    rule const r2{str};
+std::optional<std::string_view> segment_nz_nc (rule const r) {
+  return r.star ([] (rule const r2) {
     return r2.alternative(unreserved, pct_encoded, sub_delims, commercial_at).head(r2);
   }, 1U)
   .head(r);
 }
 
 // path-abempty  = *( "/" segment )
-std::optional<std::string_view> path_abempty (std::string_view const in) {
-  rule const r{in};
-  return r.star ([] (std::string_view str) {
-    rule const r2{str};
+std::optional<std::string_view> path_abempty (rule const r) {
+  return r.star ([] (rule const r2) {
     return r2.concat(solidus).concat(segment, [] (std::string_view const seg) {
 std::cout << "segment: " << std::quoted(seg) << '\n';
     }).head(r2);
@@ -483,18 +467,14 @@ std::cout << "segment: " << std::quoted(seg) << '\n';
 }
 
 //path-absolute = "/" [ segment-nz *( "/" segment ) ]
-std::optional<std::string_view> path_absolute (std::string_view const in) {
-  rule const r{in};
+std::optional<std::string_view> path_absolute (rule const r) {
   return r
     .concat (solidus)
-    .concat_opt ([] (std::string_view const str) {
-      rule const r2{str};
+    .concat_opt ([] (rule const r2) {
       return r2
         .concat (segment_nz)
-        .concat ([] (std::string_view const s2) {
-          rule const r3{s2};
-          return r3.star ([] (std::string_view const s3) {
-            rule const r4{s3};
+        .concat ([] (rule const r3) {
+          return r3.star ([] (rule const r4) {
             return r4.concat (solidus).concat(segment).head(r4);
           })
           .head(r3);
@@ -511,13 +491,11 @@ std::optional<std::string_view> path_absolute (std::string_view const in) {
 
 
 // hp1     = "//" authority path-abempty
-std::optional<std::string_view> hp1 (std::string_view const in) {
-  rule const r{in};
+std::optional<std::string_view> hp1 (rule const r) {
   return r
     .concat(solidus)
     .concat(solidus)
-    .concat([] (std::string_view str) {
-      rule const r{str};
+    .concat([] (rule const r) {
       return authority(r).head(r);
     })
     .concat(path_abempty)
@@ -532,10 +510,8 @@ rule hier_part_rule (rule in) {
 }
 
 // query         = *( pchar / "/" / "?" )
-std::optional<std::string_view> query (std::string_view const in) {
-  rule const r{in};
-  return r.star ([] (std::string_view const str) {
-    rule const r2{str};
+std::optional<std::string_view> query (rule const r) {
+  return r.star ([] (rule const r2) {
     return r2.alternative (pchar, solidus, question_mark).head(r2);
   }).head(r);
 }
@@ -549,8 +525,8 @@ std::cout << "query: " << std::quoted(query) << '\n';
 }
 
 // fragment      = *( pchar / "/" / "?" )
-std::optional<std::string_view> fragment (std::string_view const in) {
-  return query (in);
+std::optional<std::string_view> fragment (rule const r) {
+  return query (r);
 }
 
 rule hash_fragment (rule in) {
@@ -569,16 +545,13 @@ std::optional<std::string_view> uri_rule (std::string_view const in) {
       std::cout << "scheme: " << std::quoted (scheme) << '\n';
     })
     .concat (colon)
-    .concat ([] (std::string_view const in) {
-      rule const r2{in};
+    .concat ([] (rule const r2) {
       return hier_part_rule (r2).head (r2);
     })
-    .concat_opt ([] (std::string_view const in) {
-      rule const r3{in};
+    .concat_opt ([] (rule const r3) {
       return question_query (r3).head (r3);
     })
-    .concat_opt ([] (std::string_view const in) {
-      rule const r4{in};
+    .concat_opt ([] (rule const r4) {
       return hash_fragment (r4).head (r4);
     })
     .head(r);
