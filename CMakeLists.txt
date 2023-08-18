@@ -7,3 +7,6 @@ set_target_properties (
              CXX_STANDARD_REQUIRED Yes
              CXX_EXTENSIONS No
 )
+set (opts -fsanitize=undefined) #  -fsanitize=address)
+target_compile_options (uri PUBLIC ${opts})
+target_link_options (uri PUBLIC ${opts})
