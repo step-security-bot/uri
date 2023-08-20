@@ -353,18 +353,25 @@ public:
 
   matched_result matched (char const* name, rule const& in) const {
     assert (!tail_ || in.tail_);
-    // std::cout << ((tail_ && in.tail_) ? '*' : '-') << ' ' <<
-    // std::quoted(name);
+    static constexpr auto trace = false;
+    if (trace) {
+      std::cout << ((tail_ && in.tail_) ? '*' : '-') << ' '
+                << std::quoted (name);
+    }
 
     if (tail_ && in.tail_) {
       std::string_view const& intail = *in.tail_;
       std::string_view const str =
         intail.substr (0, intail.length () - tail_->length ());
-      // std::cout << ' ' << std::quoted(str) << '\n';
+      if (trace) {
+        std::cout << ' ' << std::quoted (str) << '\n';
+      }
       return std::make_tuple (str, acceptors_);
     }
 
-    // std::cout << '\n';
+    if (trace) {
+      std::cout << '\n';
+    }
     return {};
   }
 
@@ -645,19 +652,12 @@ class uri {
   static auto dec_octet (rule r) {
     return r
       .alternative (
-        digit,
-        [] (rule r1) {
-          return r1                          // 10-99
-            .concat (char_range ('1', '9'))  // %x31-39
-            .concat (digit)                  // DIGIT
-            .matched ("%x31-39 DIGIT", r1);
-        },
-        [] (rule r2) {
-          return r2                      // 100-199
-            .concat (single_char ('1'))  // "1"
-            .concat (digit)              // 2DIGIT
-            .concat (digit)              // (...)
-            .matched ("\"1\" 2DIGIT", r2);
+        [] (rule r4) {
+          return r4                          // 250-255
+            .concat (single_char ('2'))      // "2"
+            .concat (single_char ('5'))      // "5"
+            .concat (char_range ('0', '5'))  // %x30-35
+            .matched ("\"25\" %x30-35", r4);
         },
         [] (rule r3) {
           return r3                          // 200-249
@@ -666,13 +666,20 @@ class uri {
             .concat (digit)                  // DIGIT
             .matched ("\"2\" %x30-34 DIGIT", r3);
         },
-        [] (rule r4) {
-          return r4                          // 250-255
-            .concat (single_char ('2'))      // "2"
-            .concat (single_char ('5'))      // "5"
-            .concat (char_range ('0', '5'))  // %x30-35
-            .matched ("\"25\" %x30-35", r4);
-        })
+        [] (rule r2) {
+          return r2                      // 100-199
+            .concat (single_char ('1'))  // "1"
+            .concat (digit)              // 2DIGIT
+            .concat (digit)              // (...)
+            .matched ("\"1\" 2DIGIT", r2);
+        },
+        [] (rule r1) {
+          return r1                          // 10-99
+            .concat (char_range ('1', '9'))  // %x31-39
+            .concat (digit)                  // DIGIT
+            .matched ("%x31-39 DIGIT", r1);
+        },
+        digit)
       .matched ("dec-octet", r);
   }
   // IPv4address   = dec-octet "." dec-octet "." dec-octet "." dec-octet
@@ -694,7 +701,7 @@ class uri {
     return r.concat (h16).concat (single_colon).matched ("h16:", r);
   }
   static auto colon_colon (rule r) {
-    return r.star (colon, 2, 2).matched ("\"::\"", r);
+    return r.concat (colon).concat (colon).matched ("\"::\"", r);
   }
   // ls32          = ( h16 ":" h16 ) / IPv4address
   static auto ls32 (rule r) {
@@ -850,10 +857,7 @@ class uri {
               .alternative (uri::ip_literal, uri::ipv4address, uri::reg_name)
               .matched ("IP-literal / IPv4address / reg-name", r1);
           },
-          [&result] (std::string_view host) {
-            // std::cout << "host=" << host << '\n';
-            result.host = host;
-          })
+          [&result] (std::string_view host) { result.host = host; })
         .matched ("host", r);
     };
   }
