@@ -157,7 +157,10 @@ private:
   template <typename MatchFunction, typename... Rest>
   rule alternative_impl (MatchFunction match, Rest&&... rest);
 
-  rule join_rule (matched_result::value_type const& m);
+  rule join_rule (matched_result::value_type const& m) {
+    auto const& [head, acceptors] = m;
+    return {tail_->substr (head.length ()), join (acceptors_, acceptors)};
+  }
 
   template <typename T>
   static std::vector<T> join (std::vector<T> const& a,

@@ -65,15 +65,25 @@ function (setup_gtest)
 
 endfunction (setup_gtest)
 
+function (setup_target target)
+
+  set_target_properties (
+    ${target}
+    PROPERTIES CXX_STANDARD ${STANDARD}
+               CXX_STANDARD_REQUIRED Yes
+               CXX_EXTENSIONS No
+  )
+  set (${target} -fsanitize=undefined) # -fsanitize=address)
+  target_compile_options (${target} PUBLIC ${opts})
+  target_link_options (${target} PUBLIC ${opts})
+
+endfunction (setup_target)
+
 add_executable (uri uri.hpp main.cpp rule.hpp rule.cpp)
-set_target_properties (
-  uri
-  PROPERTIES CXX_STANDARD ${STANDARD}
-             CXX_STANDARD_REQUIRED Yes
-             CXX_EXTENSIONS No
-)
-set (opts -fsanitize=undefined) # -fsanitize=address)
-target_compile_options (uri PUBLIC ${opts})
-target_link_options (uri PUBLIC ${opts})
+setup_target (uri)
 
 setup_gtest ()
+
+add_executable (unittest test_rule.cpp)
+target_link_libraries (unittest gmock_main)
+setup_target (unittest)
