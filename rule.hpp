@@ -174,11 +174,11 @@ private:
 };
 
 inline auto single_char (char const first) {
-  return [=] (rule const r) { return r.single_char (first); };
+  return [=] (rule const & r) { return r.single_char (first); };
 }
 inline auto char_range (char const first, char const last) {
   return [f = std::tolower (static_cast<int> (first)),
-          l = std::tolower (static_cast<int> (last))] (rule const r) {
+          l = std::tolower (static_cast<int> (last))] (rule const & r) {
     return r.single_char ([=] (char const c) {
       auto const cl = std::tolower (static_cast<int> (c));
       return cl >= f && cl <= l;
@@ -186,47 +186,47 @@ inline auto char_range (char const first, char const last) {
   };
 }
 
-inline auto alpha (rule const r) {
+inline auto alpha (rule const & r) {
   return r.single_char (
     [] (char const c) { return std::isalpha (static_cast<int> (c)); });
 }
-inline auto digit (rule const r) {
+inline auto digit (rule const & r) {
   return r.single_char (
     [] (char const c) { return std::isdigit (static_cast<int> (c)); });
 }
-inline auto hexdig (rule const r) {
+inline auto hexdig (rule const & r) {
   return r.single_char (
     [] (char const c) { return std::isxdigit (static_cast<int> (c)); });
 }
 
-inline auto commercial_at (rule const r) {
+inline auto commercial_at (rule const & r) {
   return r.single_char ('@');
 }
-inline auto colon (rule const r) {
+inline auto colon (rule const & r) {
   return r.single_char (':');
 }
-inline auto hash (rule const r) {
+inline auto hash (rule const & r) {
   return r.single_char ('#');
 }
-inline auto plus (rule const r) {
+inline auto plus (rule const & r) {
   return r.single_char ('+');
 }
-inline auto minus (rule const r) {
+inline auto minus (rule const & r) {
   return r.single_char ('-');
 }
-inline auto solidus (rule const r) {
+inline auto solidus (rule const & r) {
   return r.single_char ('/');
 }
-inline auto question_mark (rule const r) {
+inline auto question_mark (rule const & r) {
   return r.single_char ('?');
 }
-inline auto full_stop (rule const r) {
+inline auto full_stop (rule const & r) {
   return r.single_char ('.');
 }
-inline auto left_square_bracket (rule const r) {
+inline auto left_square_bracket (rule const & r) {
   return r.single_char ('[');
 }
-inline auto right_square_bracket (rule const r) {
+inline auto right_square_bracket (rule const & r) {
   return r.single_char (']');
 }
 
@@ -252,7 +252,6 @@ rule rule::star (MatchFunction const match, unsigned const min,
   auto length = std::string_view::size_type{0};
   std::string_view str = *tail_;
   auto count = 0U;
-  // acceptor_container acceptors = acceptors_;
   for (;;) {
     matched_result const m = match (rule{str});
     if (!m) {
@@ -270,10 +269,10 @@ rule rule::star (MatchFunction const match, unsigned const min,
     acceptors_.insert (acceptors_.end (), a.begin (), a.end ());
   }
   if (count < min) {
-    return rule{};
+    return {};
   }
 
-  return rule{tail_->substr (length), acceptors_};
+  return {tail_->substr (length), acceptors_};
 }
 
 // alternative
