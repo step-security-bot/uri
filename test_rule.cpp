@@ -72,7 +72,7 @@ TEST_F (Rule, AlternativeFail) {
   EXPECT_FALSE (ok);
   EXPECT_TRUE (output_.empty ());
 }
-
+// NOLINTEXTLINE
 TEST_F (Rule, Star) {
   bool ok =
     rule ("aaa")
@@ -83,27 +83,32 @@ TEST_F (Rule, Star) {
   EXPECT_TRUE (ok);
   EXPECT_THAT (output_, ElementsAre ("a", "a", "a"));
 }
-
-void test_star2 () {
-  std::vector<std::string> output;
-  int ctr = 0;
-  auto remember = [&output] (std::string_view str) {
-    output.emplace_back (str);
-  };
-
+// NOLINTEXTLINE
+TEST_F (Rule, StarConcat) {
+  bool ok =
+    rule ("aaab")
+      .star ([this] (rule r) {
+        return r.concat (single_char ('a'), remember ()).matched ("a", r);
+      })
+      .concat (single_char ('b'), remember ())
+      .done ();
+  EXPECT_TRUE (ok);
+  EXPECT_THAT (output_, ElementsAre ("a", "a", "a", "b"));
+}
+// NOLINTEXTLINE
+TEST_F (Rule, Star2) {
   bool ok =
     rule ("/")
-      .star ([&remember] (rule r1) {
-        return r1.concat (single_char ('/'), remember)
+      .star ([this] (rule r1) {
+        return r1.concat (single_char ('/'), remember ())
           .concat (
             [] (rule r2) {
               return r2.star (char_range ('a', 'z')).matched ("a-z", r2);
             },
-            remember)
+            remember ())
           .matched ("*(a-z)", r1);
       })
       .done ();
-  assert (output.size () == 2);
-  assert (output[0] == "/");
-  assert (output[1] == "");
+  EXPECT_TRUE (ok);
+  EXPECT_THAT (output_, ElementsAre ("/", ""));
 }
