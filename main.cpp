@@ -378,7 +378,9 @@ public:
   template <typename Predicate>
   matched_result single_char (Predicate pred) const;
   matched_result single_char (char const c) const {
-    return single_char ([c] (char d) { return c == d; });
+    return single_char ([c2 = std::tolower (static_cast<int> (c))] (char d) {
+      return c2 == std::tolower (static_cast<int> (d));
+    });
   }
 
 private:
@@ -445,7 +447,7 @@ rule rule::star (MatchFunction const match, unsigned const min,
     }
     ++count;
     if (count > max) {
-      return rule{};
+      break;
     }
     auto const l = std::get<std::string_view> (*m).length ();
     str.remove_prefix (l);
@@ -493,14 +495,15 @@ auto rule::single_char (Predicate const pred) const -> matched_result {
 }
 
 auto single_char (char const first) {
-  return [=] (rule const r) {
-    return r.single_char ([=] (char const c) { return c == first; });
-  };
+  return [=] (rule const r) { return r.single_char (first); };
 }
 auto char_range (char const first, char const last) {
-  return [=] (rule const r) {
-    return r.single_char (
-      [=] (char const c) { return c >= first && c <= last; });
+  return [f = std::tolower (static_cast<int> (first)),
+          l = std::tolower (static_cast<int> (last))] (rule const r) {
+    return r.single_char ([=] (char const c) {
+      auto const cl = std::tolower (static_cast<int> (c));
+      return cl >= f && cl <= l;
+    });
   };
 }
 
