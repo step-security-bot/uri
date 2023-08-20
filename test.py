@@ -8,7 +8,6 @@ def parse (s):
   asstr = lambda x: '"' + x + '"' if x is not None else None
   
   u = uritools.urisplit(s)
-  #print (u)  
   print(' scheme: {0}'.format(asstr(u.scheme)))
   print(' userinfo: {0}'.format(asstr(u.userinfo)))
   print(' host: {0}'.format(asstr(u.host)))
