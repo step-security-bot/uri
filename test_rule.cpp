@@ -6,6 +6,7 @@
 #include "rule.hpp"
 
 using testing::ElementsAre;
+using namespace std::string_literals;
 
 class Rule : public testing::Test {
 protected:
@@ -23,6 +24,25 @@ TEST_F (Rule, Concat) {
               .done ();
   EXPECT_TRUE (ok);
   EXPECT_THAT (output_, ElementsAre ("a", "b"));
+}
+// NOLINTEXTLINE
+TEST_F (Rule, ConcatAcceptorOrder) {
+  bool ok = rule ("ab")
+              .concat (
+                [this] (rule r) {
+                  return r
+                    .concat ([this] (rule r) { return r.single_char ('a'); },
+                             remember ())
+                    .concat ([this] (rule r) { return r.single_char ('b'); },
+                             remember ())
+                    .matched ("ab", r);
+                },
+                [this] (std::string_view str) {
+                  output_.push_back ("post "s + std::string{str});
+                })
+              .done ();
+  EXPECT_TRUE (ok);
+  EXPECT_THAT (output_, ElementsAre ("a", "b", "post ab"));
 }
 // NOLINTEXTLINE
 TEST_F (Rule, FirstAlternative) {
