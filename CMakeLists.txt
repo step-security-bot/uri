@@ -1,6 +1,7 @@
 cmake_minimum_required (VERSION 3.13)
 project (uri CXX)
 add_executable (uri
+  uri.hpp
   main.cpp
   rule.hpp
   rule.cpp

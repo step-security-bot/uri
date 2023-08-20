@@ -167,6 +167,63 @@ private:
   optsv tail_;
 };
 
+inline auto single_char (char const first) {
+  return [=] (rule const r) { return r.single_char (first); };
+}
+inline auto char_range (char const first, char const last) {
+  return [f = std::tolower (static_cast<int> (first)),
+          l = std::tolower (static_cast<int> (last))] (rule const r) {
+    return r.single_char ([=] (char const c) {
+      auto const cl = std::tolower (static_cast<int> (c));
+      return cl >= f && cl <= l;
+    });
+  };
+}
+
+inline auto alpha (rule const r) {
+  return r.single_char (
+    [] (char const c) { return std::isalpha (static_cast<int> (c)); });
+}
+inline auto digit (rule const r) {
+  return r.single_char (
+    [] (char const c) { return std::isdigit (static_cast<int> (c)); });
+}
+inline auto hexdig (rule const r) {
+  return r.single_char (
+    [] (char const c) { return std::isxdigit (static_cast<int> (c)); });
+}
+
+inline auto commercial_at (rule const r) {
+  return r.single_char ('@');
+}
+inline auto colon (rule const r) {
+  return r.single_char (':');
+}
+inline auto hash (rule const r) {
+  return r.single_char ('#');
+}
+inline auto plus (rule const r) {
+  return r.single_char ('+');
+}
+inline auto minus (rule const r) {
+  return r.single_char ('-');
+}
+inline auto solidus (rule const r) {
+  return r.single_char ('/');
+}
+inline auto question_mark (rule const r) {
+  return r.single_char ('?');
+}
+inline auto full_stop (rule const r) {
+  return r.single_char ('.');
+}
+inline auto left_square_bracket (rule const r) {
+  return r.single_char ('[');
+}
+inline auto right_square_bracket (rule const r) {
+  return r.single_char (']');
+}
+
 // alternative
 // ~~~~~~~~~~~
 template <typename MatchFunction, typename... Rest>
