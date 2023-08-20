@@ -2,15 +2,21 @@
 #define RULE_HPP
 
 #include <array>
+#include <cassert>
 #include <cctype>
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <iterator>
+#include <limits>
 #include <optional>
 #include <string_view>
 #include <tuple>
 #include <vector>
 
+// The rule class is intended to enable the (reasonably) straightforward
+// conversion of ABNF grammars to C++ code.
+// -
 class rule {
 public:
   using optsv = std::optional<std::string_view>;

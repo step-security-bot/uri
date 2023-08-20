@@ -8,7 +8,8 @@ using namespace std::literals::string_view_literals;
 using namespace std::literals::string_literals;
 
 bool starts_with (std::string_view in, std::string_view s) {
-  return in.starts_with (s);
+  return in.size () >= s.size () && in.compare (0, s.size (), s) == 0;
+  // return in.starts_with (s);
 }
 // The following normalizations are described in RFC 3986 [1] to result in
 // equivalent URIs:
