@@ -254,12 +254,11 @@ std::vector<T> join (std::vector<T> const& a, std::vector<T> const& b) {
 class rule {
 public:
   using optsv = std::optional<std::string_view>;
-
-private:
   using acceptor = std::function<void (std::string_view)>;
   using acceptor_container =
     std::vector<std::tuple<acceptor, std::string_view>>;
 
+private:
   rule (optsv string, acceptor_container&& acceptors)
       : tail_{string}, acceptors_{std::move (acceptors)} {}
   rule (optsv string, acceptor_container const& acceptors)
@@ -270,12 +269,13 @@ public:
   explicit rule (std::string_view string) : tail_{string} {}
   rule (rule const& rhs) = default;
   rule (rule&& rhs) noexcept = default;
+  ~rule () noexcept = default;
 
   rule& operator= (rule const& rhs) = default;
   rule& operator= (rule&& rhs) noexcept = default;
 
   bool done () {
-    if (!tail_) {
+    if (!tail_ || !tail_->empty ()) {
       return false;
     }
     std::for_each (std::begin (acceptors_), std::end (acceptors_),
@@ -307,20 +307,16 @@ public:
               std::is_invocable_v<MatchFunction, rule> &&
               std::is_invocable_v<AcceptFunction, std::string_view>>>
   rule optional (MatchFunction match, AcceptFunction accept) {
-#if 1
     if (!tail_) {
       // If matching has already failed, then pass that condition down the
       // chain.
       return *this;
     }
-    rule res = rule{*tail_}.concat_impl (match, accept, false);
+    rule res = rule{*tail_}.concat_impl (match, accept, true);
     if (!res.tail_) {
       return *this;  // The rule failed, so carry on as if nothing happened.
     }
     return rule{res.tail_, join (acceptors_, res.acceptors_)};
-#else
-    return concat_impl (match, accept, reject, true);
-#endif
   }
   template <typename MatchFunction, typename = std::enable_if_t<
                                       std::is_invocable_v<MatchFunction, rule>>>
@@ -355,12 +351,20 @@ public:
   using matched_result =
     std::optional<std::tuple<std::string_view, acceptor_container>>;
 
-  matched_result matched (rule const in) const {
+  matched_result matched (char const* name, rule const& in) const {
+    assert (!tail_ || in.tail_);
+    // std::cout << ((tail_ && in.tail_) ? '*' : '-') << ' ' <<
+    // std::quoted(name);
+
     if (tail_ && in.tail_) {
       std::string_view const& intail = *in.tail_;
-      return std::make_tuple (
-        intail.substr (0, intail.length () - tail_->length ()), acceptors_);
+      std::string_view const str =
+        intail.substr (0, intail.length () - tail_->length ());
+      // std::cout << ' ' << std::quoted(str) << '\n';
+      return std::make_tuple (str, acceptors_);
     }
+
+    // std::cout << '\n';
     return {};
   }
 
@@ -557,6 +561,24 @@ struct uri_parts {
   std::optional<std::string> fragment;
 };
 
+auto single_colon (rule r) -> rule::matched_result {
+  return r.concat (colon)
+    .concat ([] (rule const& r2) -> rule::matched_result {
+      auto const& sv = r2.tail ();
+      if (!sv) {
+        return {};
+      }
+      if (sv->empty () || sv->front () != ':') {
+        return std::make_tuple (sv->substr (0, 0), rule::acceptor_container{});
+      }
+      if (sv->front () != ':') {
+        return std::make_tuple (sv->substr (0, 1), rule::acceptor_container{});
+      }
+      return {};
+    })
+    .matched ("single-colon", r);
+}
+
 class uri {
   // sub-delims    = "!" / "$" / "&" / "'" / "(" / ")"
   //               / "*" / "+" / "," / ";" / "="
@@ -568,7 +590,7 @@ class uri {
     });
   }
   // unreserved    = ALPHA / DIGIT / "-" / "." / "_" / "~"
-  static auto unreserved (rule const r) {
+  static auto unreserved (rule r) {
     return r.single_char ([] (char const c) {
       return std::isalnum (static_cast<int> (c)) || c == '-' || c == '.' ||
              c == '_' || c == '~';
@@ -577,46 +599,43 @@ class uri {
   // pct-encoded   = "%" HEXDIG HEXDIG
   static auto pct_encoded (rule r) {
     return r.concat (single_char ('%'))
-        .concat (hexdig)
-        .concat (hexdig)
-        .matched (r);
+      .concat (hexdig)
+      .concat (hexdig)
+      .matched ("pct-encoded", r);
   }
   // pchar         = unreserved / pct-encoded / sub-delims / ":" / "@"
   static auto pchar (rule r) {
     return r
-        .alternative (unreserved, pct_encoded, sub_delims, colon, commercial_at)
-        .matched (r);
+      .alternative (unreserved, pct_encoded, sub_delims, colon, commercial_at)
+      .matched ("pchar", r);
   }
   // userinfo      = *( unreserved / pct-encoded / sub-delims / ":" )
   static auto userinfo (rule r) {
     return r
-      .star (
-        [] (rule r2) {
-          return r2.alternative (unreserved, pct_encoded, sub_delims, colon)
-              .matched (r2);
-        })
-      .matched (r);
+      .star ([] (rule r2) {
+        return r2.alternative (unreserved, pct_encoded, sub_delims, colon)
+          .matched ("userinfo/*", r2);
+      })
+      .matched ("userinfo", r);
   }
   // scheme = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )
   static auto scheme (rule r) {
     return r.concat (alpha)
-      .star (
-        [] (rule r2) {
-          return r2.alternative (alpha, digit, plus, minus, full_stop)
-              .matched (r2);
-        })
-      .matched (r);
+      .star ([] (rule r2) {
+        return r2.alternative (alpha, digit, plus, minus, full_stop)
+          .matched ("scheme/*", r2);
+      })
+      .matched ("scheme", r);
   }
   // reg-name      = *( unreserved / pct-encoded / sub-delims )
   static auto reg_name (rule r) {
     return r
-      .star (
-        [] (rule r1) {
-          return r1
-              .alternative (uri::unreserved, uri::pct_encoded, uri::sub_delims)
-              .matched (r1);
-        })
-      .matched (r);
+      .star ([] (rule r1) {
+        return r1
+          .alternative (uri::unreserved, uri::pct_encoded, uri::sub_delims)
+          .matched ("reg-name/*", r1);
+      })
+      .matched ("reg-name", r);
   }
   // dec-octet     = DIGIT                 ; 0-9
   //               / %x31-39 DIGIT         ; 10-99
@@ -631,60 +650,62 @@ class uri {
           return r1                          // 10-99
             .concat (char_range ('1', '9'))  // %x31-39
             .concat (digit)                  // DIGIT
-            .matched (r1);
+            .matched ("%x31-39 DIGIT", r1);
         },
         [] (rule r2) {
           return r2                      // 100-199
             .concat (single_char ('1'))  // "1"
             .concat (digit)              // 2DIGIT
             .concat (digit)              // (...)
-            .matched (r2);
+            .matched ("\"1\" 2DIGIT", r2);
         },
         [] (rule r3) {
           return r3                          // 200-249
             .concat (single_char ('2'))      // "2"
             .concat (char_range ('0', '4'))  // %x30-34
             .concat (digit)                  // DIGIT
-            .matched (r3);
+            .matched ("\"2\" %x30-34 DIGIT", r3);
         },
         [] (rule r4) {
           return r4                          // 250-255
             .concat (single_char ('2'))      // "2"
             .concat (single_char ('5'))      // "5"
             .concat (char_range ('0', '5'))  // %x30-35
-            .matched (r4);
+            .matched ("\"25\" %x30-35", r4);
         })
-      .matched (r);
+      .matched ("dec-octet", r);
   }
   // IPv4address   = dec-octet "." dec-octet "." dec-octet "." dec-octet
   static auto ipv4address (rule r) {
     return r
-        .concat (uri::dec_octet)  // dec-octet
-        .concat (full_stop)       // "."
-        .concat (uri::dec_octet)  // dec-octet
-        .concat (full_stop)       // "."
-        .concat (uri::dec_octet)  // dec-octet
-        .concat (full_stop)       // "."
-        .concat (uri::dec_octet)  // dec-octet
-        .matched (r);
+      .concat (uri::dec_octet)  // dec-octet
+      .concat (full_stop)       // "."
+      .concat (uri::dec_octet)  // dec-octet
+      .concat (full_stop)       // "."
+      .concat (uri::dec_octet)  // dec-octet
+      .concat (full_stop)       // "."
+      .concat (uri::dec_octet)  // dec-octet
+      .matched ("IPv4address", r);
   }
   // h16 = 1*4HEXDIG
-  static auto h16 (rule r) { return r.star (hexdig, 1, 4).matched (r); }
+  static auto h16 (rule r) { return r.star (hexdig, 1, 4).matched ("h16", r); }
   // h16colon = h16 ":"
   static auto h16_colon (rule r) {
-    return r.concat (h16).concat (colon).matched (r);
+    return r.concat (h16).concat (single_colon).matched ("h16:", r);
   }
-  static auto colon_colon (rule r) { return r.star (colon, 2, 2).matched (r); }
+  static auto colon_colon (rule r) {
+    return r.star (colon, 2, 2).matched ("\"::\"", r);
+  }
   // ls32          = ( h16 ":" h16 ) / IPv4address
   static auto ls32 (rule r) {
     return r
       .alternative (
         [] (rule r1) {
           return r1.concat (uri::h16).concat (colon).concat (uri::h16).matched (
-            r1);
+            "h16:h16", r1);
         },
         uri::ipv4address)
-      .matched (r);
+      .matched ("ls32", r);
   }
   // IPv6address =                            6( h16 ":" ) ls32 // r1
   //             /                       "::" 5( h16 ":" ) ls32 // r2
@@ -700,14 +721,16 @@ class uri {
       .alternative (
         [] (rule r1) {
           // 6( h16 ":" ) ls32
-          return r1.star (uri::h16_colon, 6, 6).concat (uri::ls32).matched (r1);
+          return r1.star (uri::h16_colon, 6, 6)
+            .concat (uri::ls32)
+            .matched ("6( h16: ) ls32", r1);
         },
         [] (rule r2) {
           // "::" 5( h16 ":" ) ls32
           return r2.concat (uri::colon_colon)
             .star (uri::h16_colon, 5, 5)
             .concat (uri::ls32)
-            .matched (r2);
+            .matched ("\"::\" 5( h16 colon ) ls32", r2);
         },
         [] (rule r3) {
           // [ h16 ] "::" 4( h16 ":" ) ls32
@@ -715,7 +738,7 @@ class uri {
             .concat (uri::colon_colon)
             .star (uri::h16_colon, 4, 4)
             .concat (uri::ls32)
-            .matched (r3);
+            .matched ("[ h16 ] \"::\" 4( h16 colon ) ls32", r3);
         },
         [] (rule r4) {
           // [ *1( h16 ":" ) h16 ] "::" 3( h16 ":" ) ls32
@@ -723,12 +746,12 @@ class uri {
             .optional ([] (rule r4a) {
               return r4a.star (uri::h16_colon, 0, 1)
                 .concat (uri::h16)
-                .matched (r4a);
+                .matched ("*1( h16 colon ) h16", r4a);
             })
             .concat (uri::colon_colon)
             .star (uri::h16_colon, 3, 3)
             .concat (uri::ls32)
-            .matched (r4);
+            .matched ("[ *1( h16 colon ) h16 ] \"::\" 3( h16 colon ) ls32", r4);
         },
         [] (rule r5) {
           // [ *2( h16 ":" ) h16 ] "::" 2( h16 ":" ) ls32
@@ -736,12 +759,12 @@ class uri {
             .optional ([] (rule r5a) {
               return r5a.star (uri::h16_colon, 0, 2)
                 .concat (uri::h16)
-                .matched (r5a);
+                .matched ("*2( h16 colon ) h16", r5a);
             })
             .concat (uri::colon_colon)
             .star (uri::h16_colon, 2, 2)
             .concat (uri::ls32)
-            .matched (r5);
+            .matched ("[ *2( h16 colon ) h16 ] \"::\" 2( h16 colon ) ls32", r5);
         },
         [] (rule r6) {
           // [ *3( h16 ":" ) h16 ] "::" h16 ":" ls32
@@ -749,12 +772,12 @@ class uri {
             .optional ([] (rule r6a) {
               return r6a.star (uri::h16_colon, 0, 3)
                 .concat (uri::h16)
-                .matched (r6a);
+                .matched ("*3( h16 colon ) h16", r6a);
             })
             .concat (uri::colon_colon)
             .concat (uri::h16_colon)
             .concat (uri::ls32)
-            .matched (r6);
+            .matched ("[ *3( h16 colon ) h16 ] \"::\" h16 colon ls32", r6);
         },
         [] (rule r7) {
           // [ *4( h16 ":" ) h16 ] "::" ls32
@@ -762,11 +785,11 @@ class uri {
             .optional ([] (rule r7a) {
               return r7a.star (uri::h16_colon, 0, 4)
                 .concat (uri::h16)
-                .matched (r7a);
+                .matched ("*4( h16 colon ) h16", r7a);
             })
             .concat (uri::colon_colon)
             .concat (uri::ls32)
-            .matched (r7);
+            .matched ("[ *4( h16 colon ) h16 ] \"::\" ls32", r7);
         },
         [] (rule r8) {
           // [ *5( h16 ":" ) h16 ] "::" h16
@@ -774,11 +797,11 @@ class uri {
             .optional ([] (rule r8a) {
               return r8a.star (uri::h16_colon, 0, 5)
                 .concat (uri::h16)
-                .matched (r8a);
+                .matched ("*5( h16 colon ) h16", r8a);
             })
             .concat (uri::colon_colon)
             .concat (uri::h16)
-            .matched (r8);
+            .matched ("[ *5( h16 colon ) h16 ] \"::\" h16", r8);
         },
         [] (rule r9) {
           // [ *6( h16 ":" ) h16 ] "::"
@@ -786,12 +809,12 @@ class uri {
             .optional ([] (rule r9a) {
               return r9a.star (uri::h16_colon, 0, 6)
                 .concat (uri::h16)
-                .matched (r9a);
+                .matched ("*6( h16 colon ) h16", r9a);
             })
             .concat (uri::colon_colon)
-            .matched (r9);
+            .matched ("[ *6( h16 colon ) h16 ] \"::\"", r9);
         })
-      .matched (r);
+      .matched ("IPv6address", r);
   }
   // IPvFuture     = "v" 1*HEXDIG "." 1*( unreserved / sub-delims / ":" )
   static auto ipvfuture (rule r) {
@@ -801,19 +824,20 @@ class uri {
       .star (
         [] (rule r1) {
           return r1.alternative (uri::unreserved, uri::sub_delims, colon)
-            .matched (r1);
+            .matched ("unreserved / sub-delims / colon", r1);
         },
         1)
-      .matched (r);
+      .matched ("IPvFuture", r);
   }
-  // IP-literal    = "[" ( IPv6address / IPvFuture  ) "]"
+  // IP-literal    = "[" ( IPv6address / IPvFuture ) "]"
   static auto ip_literal (rule r) {
     return r.concat (left_square_bracket)
       .concat ([] (rule r1) {
-        return r1.alternative (uri::ipv6address, uri::ipvfuture).matched (r1);
+        return r1.alternative (uri::ipv6address, uri::ipvfuture)
+          .matched ("IPv6address / IPvFuture", r1);
       })
       .concat (right_square_bracket)
-      .matched (r);
+      .matched ("IP-literal", r);
   }
 
   auto host_rule () {
@@ -824,35 +848,38 @@ class uri {
           [] (rule r1) {
             return r1
               .alternative (uri::ip_literal, uri::ipv4address, uri::reg_name)
-              .matched (r1);
+              .matched ("IP-literal / IPv4address / reg-name", r1);
           },
-          [&result] (std::string_view host) { result.host = host; })
-        .matched (r);
+          [&result] (std::string_view host) {
+            // std::cout << "host=" << host << '\n';
+            result.host = host;
+          })
+        .matched ("host", r);
     };
   }
   auto userinfo_at () {
     // userinfo-at = userinfo "@"
     return [&result = result_] (rule r) {
       return r
-          .concat (uri::userinfo,
-                   [&result] (std::string_view const userinfo) {
-                     result.userinfo = userinfo;
-                   })
-          .concat (commercial_at)
-          .matched (r);
+        .concat (uri::userinfo,
+                 [&result] (std::string_view const userinfo) {
+                   result.userinfo = userinfo;
+                 })
+        .concat (commercial_at)
+        .matched ("userinfo \"@\"", r);
     };
   }
 
   // port = *DIGIT
-  static auto port (rule r) { return r.star (digit).matched (r); }
+  static auto port (rule r) { return r.star (digit).matched ("port", r); }
 
   auto colon_port () {
     // colon-port = ":" port
     return [&result = result_] (rule r) {
       return r.concat (colon)
-          .concat (port,
-                   [&result] (std::string_view const p) { result.port = p; })
-          .matched (r);
+        .concat (port,
+                 [&result] (std::string_view const p) { result.port = p; })
+        .matched ("\":\" port", r);
     };
   }
 
@@ -862,15 +889,17 @@ class uri {
       return r.optional (this->userinfo_at ())
         .concat (this->host_rule ())
         .optional (this->colon_port ())
-        .matched (r);
+        .matched ("authority", r);
     };
   }
 
   // segment       = *pchar
-  static auto segment (rule r) { return r.star (uri::pchar).matched (r); }
+  static auto segment (rule r) {
+    return r.star (uri::pchar).matched ("segment", r);
+  }
   // segment-nz    = 1*pchar
   static auto segment_nz (rule r) {
-    return r.star (uri::pchar, 1U).matched (r);
+    return r.star (uri::pchar, 1U).matched ("segment-nz", r);
   }
   // segment-nz-nc = 1*( unreserved / pct-encoded / sub-delims / "@" )
   //                  ; non-zero-length segment without any colon ":"
@@ -881,10 +910,10 @@ class uri {
           return r2
             .alternative (uri::unreserved, uri::pct_encoded, uri::sub_delims,
                           commercial_at)
-            .matched (r2);
+            .matched ("unreserved / pct-encoded / sub-delims / \"@\"", r2);
         },
         1U)
-      .matched (r);
+      .matched ("segment-nz-nc", r);
   }
   auto path_abempty () {
     // path-abempty  = *( "/" segment )
@@ -900,9 +929,9 @@ class uri {
                      [&result] (std::string_view const seg) {
                        result.segments.back () += seg;
                      })
-            .matched (r2);
+            .matched ("\"/\" segment", r2);
         })
-        .matched (r);
+        .matched ("path-abempty", r);
     };
   }
   auto path_absolute () {
@@ -931,18 +960,18 @@ class uri {
                              [&result] (std::string_view const seg) {
                                result.segments.back () += seg;
                              })
-                    .matched (r3);
+                    .matched ("\"/\" segment", r3);
                 })
-                .matched (r2);
+                .matched ("*( \"/\" segment )", r2);
             })
-            .matched (r1);
+            .matched ("*( \"/\" segment )", r1);
         })
-        .matched (r);
+        .matched ("path-absolute", r);
     };
   }
   // path-empty    = 0<pchar>
   static auto path_empty (rule r) {
-    return r.star (uri::pchar, 0, 0).matched (r);
+    return r.star (uri::pchar, 0, 0).matched ("path-empty", r);
   }
   // path-rootless = segment-nz *( "/" segment )
   auto path_rootless () {
@@ -962,9 +991,9 @@ class uri {
                      [&result] (std::string_view const seg) {
                        result.segments.back () += seg;
                      })
-            .matched (r1);
+            .matched ("\"/\" segment", r1);
         })
-        .matched (r);
+        .matched ("path-rootless", r);
     };
   }
 
@@ -981,10 +1010,10 @@ class uri {
               .concat (solidus)
               .concat (this->authority ())
               .concat (this->path_abempty ())
-              .matched (r1);
+              .matched ("\"//\" authority path-abempty", r1);
           },
           this->path_absolute (), this->path_rootless (), path_empty)
-        .matched (r);
+        .matched ("hier-part", r);
     };
   }
 
@@ -992,9 +1021,10 @@ class uri {
   static auto query (rule r) {
     return r
       .star ([] (rule r2) {
-        return r2.alternative (uri::pchar, solidus, question_mark).matched (r2);
+        return r2.alternative (uri::pchar, solidus, question_mark)
+          .matched ("pchar / \"/\" / \"?\"", r2);
       })
-      .matched (r);
+      .matched ("query", r);
   }
   // fragment      = *( pchar / "/" / "?" )
   static auto fragment (rule r) { return query (r); }
@@ -1018,7 +1048,7 @@ public:
                      [&result] (std::string_view const query) {
                        result.query = query;
                      })
-            .matched (rq);
+            .matched ("\"?\" query", rq);
         })
         .optional ([&result = result_] (rule rf) {
           // "#" fragment
@@ -1029,7 +1059,7 @@ public:
               [&result] (std::string_view const fragment) {
                 result.fragment = fragment;
               })
-            .matched (rf);
+            .matched ("\"#\" fragment", rf);
         })
         .done ();
     if (success) {
@@ -1066,10 +1096,10 @@ void test_alternative () {
     output.emplace_back (str);
   };
   auto b = [&remember] (rule r) {
-    return r.concat (single_char ('b'), remember).matched (r);
+    return r.concat (single_char ('b'), remember).matched ("b", r);
   };
   auto c = [&remember] (rule r) {
-    return r.concat (single_char ('c'), remember).matched (r);
+    return r.concat (single_char ('c'), remember).matched ("c", r);
   };
   {
     output.clear ();
@@ -1111,7 +1141,7 @@ void test_star () {
   };
 
   auto a = [&remember] (rule r) {
-    return r.concat (single_char ('a'), remember).matched (r);
+    return r.concat (single_char ('a'), remember).matched ("a", r);
   };
   output.clear ();
   bool ok = rule ("aaa").star (a).done ();
@@ -1129,17 +1159,18 @@ void test_star2 () {
     output.emplace_back (str);
   };
 
-  bool ok = rule ("/")
-              .star ([&remember] (rule r1) {
-                return r1.concat (single_char ('/'), remember)
-                  .concat (
-                    [] (rule r2) {
-                      return r2.star (char_range ('a', 'z')).matched (r2);
-                    },
-                    remember)
-                  .matched (r1);
-              })
-              .done ();
+  bool ok =
+    rule ("/")
+      .star ([&remember] (rule r1) {
+        return r1.concat (single_char ('/'), remember)
+          .concat (
+            [] (rule r2) {
+              return r2.star (char_range ('a', 'z')).matched ("a-z", r2);
+            },
+            remember)
+          .matched ("*(a-z)", r1);
+      })
+      .done ();
   assert (output.size () == 2);
   assert (output[0] == "/");
   assert (output[1] == "");
@@ -1155,10 +1186,10 @@ void test () {
 void read_stream (std::istream& is) {
   std::string line;
   while (getline (is, line)) {
+    std::cout << "URI: " << line << '\n';
+
     uri x;
     auto r = x.uri_rule (line);
-
-    std::cout << "URI: " << line << '\n';
     if (!r) {
       std::exit (EXIT_FAILURE);
     }
