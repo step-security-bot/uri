@@ -79,11 +79,30 @@ function (setup_target target)
 
 endfunction (setup_target)
 
-add_executable (uri uri.hpp main.cpp rule.hpp rule.cpp)
-setup_target (uri)
+add_library (urilib STATIC uri.hpp rule.hpp rule.cpp)
+setup_target (urilib)
+
 
 setup_gtest ()
-
 add_executable (unittest test_rule.cpp)
-target_link_libraries (unittest gmock_main)
+target_link_libraries (unittest urilib gmock_main)
 setup_target (unittest)
+
+
+add_executable (uri main.cpp)
+setup_target (uri)
+target_link_libraries (uri PUBLIC urilib)
+if (TARGET gtest)
+  set (prelink_target uri)
+  set (test_target unittest)
+  set (out_xml "${CMAKE_BINARY_DIR}/${test_target}.xml")
+  add_custom_command (
+    TARGET ${prelink_target}
+    PRE_LINK
+    COMMAND "$<TARGET_FILE:${test_target}>" "--gtest_output=xml:${out_xml}"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+    COMMENT "Running unit tests" DEPENDS ${test_target}
+    BYPRODUCTS ${out_xml}
+    VERBATIM
+  )
+endif ()

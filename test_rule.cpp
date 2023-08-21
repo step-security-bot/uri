@@ -132,3 +132,21 @@ TEST_F (Rule, Star2) {
   EXPECT_TRUE (ok);
   EXPECT_THAT (output_, ElementsAre ("/", ""));
 }
+TEST_F (Rule, OptionalPresent) {
+  bool ok = rule ("abc")
+              .concat (single_char ('a'), remember ())
+              .optional (single_char ('b'), remember ())
+              .concat (single_char ('c'), remember ())
+              .done ();
+  EXPECT_TRUE (ok);
+  EXPECT_THAT (output_, ElementsAre ("a", "b", "c"));
+}
+TEST_F (Rule, OptionalNotPresent) {
+  bool ok = rule ("ac")
+              .concat (single_char ('a'), remember ())
+              .optional (single_char ('b'), remember ())
+              .concat (single_char ('c'), remember ())
+              .done ();
+  EXPECT_TRUE (ok);
+  EXPECT_THAT (output_, ElementsAre ("a", "c"));
+}
