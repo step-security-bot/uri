@@ -8,10 +8,15 @@
 using namespace std::literals::string_view_literals;
 using namespace std::literals::string_literals;
 
+namespace {
+
+#if 0
 bool starts_with (std::string_view in, std::string_view s) {
   return in.size () >= s.size () && in.compare (0, s.size (), s) == 0;
   // return in.starts_with (s);
 }
+#endif
+
 // The following normalizations are described in RFC 3986 [1] to result in
 // equivalent URIs:
 //
@@ -63,6 +68,7 @@ bool starts_with (std::string_view in, std::string_view s) {
 //  [7]: RFC 3986, Section 6.2.3. Scheme-Based Normalization
 //  [8]: RFC 3986, Section 6.2.3. Scheme-Based Normalization
 
+#if 0
 std::string percent_decode (std::string_view src) {
   std::string result;
   result.reserve (src.length ());
@@ -82,7 +88,9 @@ std::string percent_decode (std::string_view src) {
   }
   return result;
 }
+#endif
 
+#if 0
 std::vector<std::string> remove_dot_segments (std::string_view in) {
   std::vector<std::string> out;
 
@@ -154,6 +162,7 @@ std::vector<std::string> remove_dot_segments (std::string_view in) {
   }
   return out;
 }
+#endif
 
 void read_stream (std::istream& is) {
   std::string line;
@@ -181,6 +190,8 @@ void read_stream (std::istream& is) {
     std::cout << " fragment: " << value_or_none (r->fragment) << '\n';
   }
 }
+
+}  // end anonymous namespace
 
 int main (int argc, char const* argv[]) {
   if (argc == 1) {
