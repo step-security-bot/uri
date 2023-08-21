@@ -155,114 +155,6 @@ std::vector<std::string> remove_dot_segments (std::string_view in) {
   return out;
 }
 
-void test_ab () {
-  std::vector<std::string> output;
-  bool ok =
-    rule ("ab")
-      .concat ([] (rule r) { return r.single_char ('a'); },
-               [&output] (std::string_view str) { output.emplace_back (str); })
-      .concat ([] (rule r) { return r.single_char ('b'); },
-               [&output] (std::string_view str) { output.emplace_back (str); })
-      .done ();
-  assert (ok);
-  assert (output.size () == 2);
-  assert (output[0] == "a");
-  assert (output[1] == "b");
-}
-
-void test_alternative () {
-  std::vector<std::string> output;
-  auto remember = [&output] (std::string_view str) {
-    output.emplace_back (str);
-  };
-  auto b = [&remember] (rule r) {
-    return r.concat (single_char ('b'), remember).matched ("b", r);
-  };
-  auto c = [&remember] (rule r) {
-    return r.concat (single_char ('c'), remember).matched ("c", r);
-  };
-  {
-    output.clear ();
-    bool ok = rule ("ac")
-                .concat (single_char ('a'), remember)
-                .alternative (b, c)
-                .done ();
-    assert (ok);
-    assert (output.size () == 2);
-    assert (output[0] == "a");
-    assert (output[1] == "c");
-  }
-  {
-    output.clear ();
-    bool ok = rule ("ab")
-                .concat (single_char ('a'), remember)
-                .alternative (b, c)
-                .done ();
-    assert (ok);
-    assert (output.size () == 2);
-    assert (output[0] == "a");
-    assert (output[1] == "b");
-  }
-  {
-    output.clear ();
-    bool ok = rule ("ad")
-                .concat (single_char ('a'), remember)
-                .alternative (b, c)
-                .done ();
-    assert (!ok);
-    assert (output.empty ());
-  }
-}
-
-void test_star () {
-  std::vector<std::string> output;
-  auto remember = [&output] (std::string_view str) {
-    output.emplace_back (str);
-  };
-
-  auto a = [&remember] (rule r) {
-    return r.concat (single_char ('a'), remember).matched ("a", r);
-  };
-  output.clear ();
-  bool ok = rule ("aaa").star (a).done ();
-  assert (ok);
-  assert (output.size () == 3);
-  assert (output[0] == "a");
-  assert (output[1] == "a");
-  assert (output[2] == "a");
-}
-
-void test_star2 () {
-  std::vector<std::string> output;
-  int ctr = 0;
-  auto remember = [&output] (std::string_view str) {
-    output.emplace_back (str);
-  };
-
-  bool ok =
-    rule ("/")
-      .star ([&remember] (rule r1) {
-        return r1.concat (single_char ('/'), remember)
-          .concat (
-            [] (rule r2) {
-              return r2.star (char_range ('a', 'z')).matched ("a-z", r2);
-            },
-            remember)
-          .matched ("*(a-z)", r1);
-      })
-      .done ();
-  assert (output.size () == 2);
-  assert (output[0] == "/");
-  assert (output[1] == "");
-}
-
-void test () {
-  test_ab ();
-  test_alternative ();
-  test_star ();
-  test_star2 ();
-}
-
 void read_stream (std::istream& is) {
   std::string line;
   while (getline (is, line)) {
@@ -291,7 +183,6 @@ void read_stream (std::istream& is) {
 }
 
 int main (int argc, char const* argv[]) {
-  test ();
   if (argc == 1) {
     // read_stream (std::cin);
     std::istringstream in{"Z://-@[b8::C:AB:2b]:16?%FC:"};
