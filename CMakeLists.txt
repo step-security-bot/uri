@@ -67,15 +67,84 @@ endfunction (setup_gtest)
 
 function (setup_target target)
 
+  set (
+    clang_options
+    -fsanitize=undefined
+    -Weverything
+    -Wno-c++14-extensions
+    -Wno-c++98-compat
+    -Wno-c++98-compat-pedantic
+    -Wno-c99-extensions
+    -Wno-exit-time-destructors
+    -Wno-padded
+    -Wno-undef
+    -Wno-weak-vtables
+  )
+  set (gcc_options -Wall -Wextra -pedantic -Wno-maybe-uninitialized)
+  set (
+    msvc_options
+    -W4 # enable lots of warnings
+    -wd4068 # unknown pragma
+    -wd4324 # structure was padded due to alignment specifier
+  )
+
+  if (CMAKE_CXX_COMPILER_ID MATCHES "Clang$")
+    check_cxx_compiler_flag (
+      -Wno-return-std-move-in-c++11 CLANG_RETURN_STD_MOVE_IN_CXX11
+    )
+    if (${CLANG_RETURN_STD_MOVE_IN_CXX11})
+      list (APPEND clang_options -Wno-return-std-move-in-c++11)
+    endif ()
+    check_cxx_compiler_flag (-Wno-c++20-compat CLANG_W_NO_CXX20_COMPAT)
+    if (${CLANG_W_NO_CXX20_COMPAT})
+      list (APPEND clang_options -Wno-c++20-compat)
+    endif ()
+    check_cxx_compiler_flag (-Wno-c++2a-compat CLANG_W_NO_CXX2A_COMPAT)
+    if (${CLANG_W_NO_CXX2A_COMPAT})
+      list (APPEND clang_options -Wno-c++2a-compat)
+    endif ()
+    check_cxx_compiler_flag (
+      -Wno-unsafe-buffer-usage CLANG_W_UNSAFE_BUFFER_USAGE
+    )
+    if (${CLANG_W_UNSAFE_BUFFER_USAGE})
+      list (APPEND clang_options -Wno-unsafe-buffer-usage)
+    endif ()
+  endif ()
+
+  if (WERROR)
+    list (APPEND clang_options -Werror)
+    list (APPEND gcc_options -Werror)
+    list (APPEND msvc_options /WX)
+  endif ()
+
+  if (COVERAGE)
+    list (APPEND clang_options -fprofile-instr-generate -fcoverage-mapping)
+  endif ()
+  if (LIBCXX)
+    list (APPEND clang_options -stdlib=libc++)
+  endif ()
+
   set_target_properties (
     ${target}
     PROPERTIES CXX_STANDARD ${STANDARD}
                CXX_STANDARD_REQUIRED Yes
                CXX_EXTENSIONS No
   )
-  set (${target} -fsanitize=undefined) # -fsanitize=address)
-  target_compile_options (${target} PUBLIC ${opts})
-  target_link_options (${target} PUBLIC ${opts})
+
+  target_compile_options (
+    ${target}
+    PRIVATE
+      $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:${clang_options}>
+      $<$<CXX_COMPILER_ID:GNU>:${gcc_options}>
+      $<$<CXX_COMPILER_ID:MSVC>:${msvc_options}>
+  )
+  target_link_options (
+    ${target}
+    PRIVATE
+    $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:${clang_options}>
+    $<$<CXX_COMPILER_ID:GNU>:${gcc_options}>
+    $<$<CXX_COMPILER_ID:MSVC>:>
+  )
 
 endfunction (setup_target)
 
@@ -87,11 +156,22 @@ setup_gtest ()
 add_executable (unittest test_rule.cpp)
 target_link_libraries (unittest urilib gmock_main)
 setup_target (unittest)
+set (clang_options -Wno-global-constructors -Wno-used-but-marked-unused)
+set (gcc_options)
+set (msvc_options -wd4702) # unreachable code.
+target_compile_options (
+  unittest
+  PRIVATE
+    $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:${clang_options}>
+    $<$<CXX_COMPILER_ID:GNU>:${gcc_options}>
+    $<$<CXX_COMPILER_ID:MSVC>:${msvc_options}>
+)
 
 
 add_executable (uri main.cpp)
 setup_target (uri)
 target_link_libraries (uri PUBLIC urilib)
+
 if (TARGET gtest)
   set (prelink_target uri)
   set (test_target unittest)

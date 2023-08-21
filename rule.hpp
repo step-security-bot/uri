@@ -127,8 +127,8 @@ private:
   template <typename Function>
   constexpr bool is_nop (Function f) const noexcept;
 
-  acceptor_container acceptors_;
   std::optional<std::string_view> tail_;
+  acceptor_container acceptors_;
 };
 
 // star

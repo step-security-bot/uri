@@ -27,20 +27,19 @@ TEST_F (Rule, Concat) {
 }
 // NOLINTEXTLINE
 TEST_F (Rule, ConcatAcceptorOrder) {
-  bool ok = rule ("ab")
-              .concat (
-                [this] (rule r) {
-                  return r
-                    .concat ([this] (rule r) { return r.single_char ('a'); },
-                             remember ())
-                    .concat ([this] (rule r) { return r.single_char ('b'); },
-                             remember ())
-                    .matched ("ab", r);
-                },
-                [this] (std::string_view str) {
-                  output_.push_back ("post "s + std::string{str});
-                })
-              .done ();
+  bool ok =
+    rule ("ab")
+      .concat (
+        [this] (rule r) {
+          return r
+            .concat ([] (rule r1) { return r1.single_char ('a'); }, remember ())
+            .concat ([] (rule r2) { return r2.single_char ('b'); }, remember ())
+            .matched ("ab", r);
+        },
+        [this] (std::string_view str) {
+          output_.push_back ("post "s + std::string{str});
+        })
+      .done ();
   EXPECT_TRUE (ok);
   EXPECT_THAT (output_, ElementsAre ("a", "b", "post ab"));
 }
