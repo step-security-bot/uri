@@ -240,8 +240,8 @@ rule rule::concat_impl (MatchFunction match, AcceptFunction accept,
 // ~~~~~~~~~~~
 template <typename Predicate>
 auto rule::single_char (Predicate const pred) const -> matched_result {
-  auto const sv = this->tail ();
-  if (sv && !sv->empty () && pred (sv->front ())) {
+  if (auto const sv = this->tail ();
+      sv && !sv->empty () && pred (sv->front ())) {
     return std::make_tuple (sv->substr (0, 1), acceptor_container{});
   }
   return {};
