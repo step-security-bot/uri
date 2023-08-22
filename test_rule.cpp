@@ -1,3 +1,4 @@
+
 #include <gmock/gmock.h>
 
 #include <string>
@@ -8,120 +9,122 @@
 using testing::ElementsAre;
 using namespace std::string_literals;
 
-class Rule : public testing::Test {
-protected:
-  std::vector<std::string> output_;
+struct Rule : public testing::Test {
+  std::vector<std::string> output;
 
   auto remember () {
-    return [this] (std::string_view str) { output_.emplace_back (str); };
+    return [this] (std::string_view str) { output.emplace_back (str); };
   }
 };
-// NOLINTEXTLINE
+// NOLINTNEXTLINE
 TEST_F (Rule, Concat) {
-  bool ok = rule ("ab")
-              .concat ([] (rule r) { return r.single_char ('a'); }, remember ())
-              .concat ([] (rule r) { return r.single_char ('b'); }, remember ())
-              .done ();
+  bool ok =
+    rule ("ab")
+      .concat ([] (rule const& r) { return r.single_char ('a'); }, remember ())
+      .concat ([] (rule const& r) { return r.single_char ('b'); }, remember ())
+      .done ();
   EXPECT_TRUE (ok);
-  EXPECT_THAT (output_, ElementsAre ("a", "b"));
+  EXPECT_THAT (output, ElementsAre ("a", "b"));
 }
-// NOLINTEXTLINE
+// NOLINTNEXTLINE
 TEST_F (Rule, ConcatAcceptorOrder) {
   bool ok =
     rule ("ab")
       .concat (
-        [this] (rule r) {
+        [this] (rule const& r) {
           return r
-            .concat ([] (rule r1) { return r1.single_char ('a'); }, remember ())
-            .concat ([] (rule r2) { return r2.single_char ('b'); }, remember ())
+            .concat ([] (rule const& r1) { return r1.single_char ('a'); },
+                     remember ())
+            .concat ([] (rule const& r2) { return r2.single_char ('b'); },
+                     remember ())
             .matched ("ab", r);
         },
         [this] (std::string_view str) {
-          output_.push_back ("post "s + std::string{str});
+          output.push_back ("post "s + std::string{str});
         })
       .done ();
   EXPECT_TRUE (ok);
-  EXPECT_THAT (output_, ElementsAre ("a", "b", "post ab"));
+  EXPECT_THAT (output, ElementsAre ("a", "b", "post ab"));
 }
-// NOLINTEXTLINE
+// NOLINTNEXTLINE
 TEST_F (Rule, FirstAlternative) {
   bool ok =
     rule ("ab")
       .concat (single_char ('a'), remember ())
       .alternative (
-        [this] (rule r) {
+        [this] (rule const& r) {
           return r.concat (single_char ('b'), remember ()).matched ("b", r);
         },
-        [this] (rule r) {
+        [this] (rule const& r) {
           return r.concat (single_char ('c'), remember ()).matched ("c", r);
         })
       .done ();
   EXPECT_TRUE (ok);
-  EXPECT_THAT (output_, ElementsAre ("a", "b"));
+  EXPECT_THAT (output, ElementsAre ("a", "b"));
 }
-// NOLINTEXTLINE
+// NOLINTNEXTLINE
 TEST_F (Rule, SecondAlternative) {
   bool ok =
     rule ("ac")
       .concat (single_char ('a'), remember ())
       .alternative (
-        [this] (rule r) {
+        [this] (rule const& r) {
           return r.concat (single_char ('b'), remember ()).matched ("b", r);
         },
-        [this] (rule r) {
+        [this] (rule const& r) {
           return r.concat (single_char ('c'), remember ()).matched ("c", r);
         })
       .done ();
   EXPECT_TRUE (ok);
-  EXPECT_THAT (output_, ElementsAre ("a", "c"));
+  EXPECT_THAT (output, ElementsAre ("a", "c"));
 }
-// NOLINTEXTLINE
+// NOLINTNEXTLINE
 TEST_F (Rule, AlternativeFail) {
   bool ok =
     rule ("ad")
       .concat (single_char ('a'), remember ())
       .alternative (
-        [this] (rule r) {
+        [this] (rule const& r) {
           return r.concat (single_char ('b'), remember ()).matched ("b", r);
         },
-        [this] (rule r) {
+        [this] (rule const& r) {
           return r.concat (single_char ('c'), remember ()).matched ("c", r);
         })
       .done ();
   EXPECT_FALSE (ok);
-  EXPECT_TRUE (output_.empty ());
+  EXPECT_TRUE (output.empty ());
 }
-// NOLINTEXTLINE
+// NOLINTNEXTLINE
 TEST_F (Rule, Star) {
   bool ok =
     rule ("aaa")
-      .star ([this] (rule r) {
+      .star ([this] (rule const& r) {
         return r.concat (single_char ('a'), remember ()).matched ("a", r);
       })
       .done ();
   EXPECT_TRUE (ok);
-  EXPECT_THAT (output_, ElementsAre ("a", "a", "a"));
+  EXPECT_THAT (output, ElementsAre ("a", "a", "a"));
 }
-// NOLINTEXTLINE
+// NOLINTNEXTLINE
 TEST_F (Rule, StarConcat) {
   bool ok =
     rule ("aaab")
-      .star ([this] (rule r) {
+      .star ([this] (rule const& r) {
         return r.concat (single_char ('a'), remember ()).matched ("a", r);
       })
       .concat (single_char ('b'), remember ())
       .done ();
   EXPECT_TRUE (ok);
-  EXPECT_THAT (output_, ElementsAre ("a", "a", "a", "b"));
+  EXPECT_THAT (output, ElementsAre ("a", "a", "a", "b"));
 }
-// NOLINTEXTLINE
+// NOLINTNEXTLINE
 TEST_F (Rule, Star2) {
   bool ok =
     rule ("/")
-      .star ([this] (rule r1) {
+      .star ([this] (rule const& r1) {
         return r1.concat (single_char ('/'), remember ())
           .concat (
-            [] (rule r2) {
+            [] (rule const& r2) {
               return r2.star (char_range ('a', 'z')).matched ("a-z", r2);
             },
             remember ())
@@ -129,8 +132,9 @@ TEST_F (Rule, Star2) {
       })
       .done ();
   EXPECT_TRUE (ok);
-  EXPECT_THAT (output_, ElementsAre ("/", ""));
+  EXPECT_THAT (output, ElementsAre ("/", ""));
 }
+// NOLINTNEXTLINE
 TEST_F (Rule, OptionalPresent) {
   bool ok = rule ("abc")
               .concat (single_char ('a'), remember ())
@@ -138,8 +142,9 @@ TEST_F (Rule, OptionalPresent) {
               .concat (single_char ('c'), remember ())
               .done ();
   EXPECT_TRUE (ok);
-  EXPECT_THAT (output_, ElementsAre ("a", "b", "c"));
+  EXPECT_THAT (output, ElementsAre ("a", "b", "c"));
 }
+// NOLINTNEXTLINE
 TEST_F (Rule, OptionalNotPresent) {
   bool ok = rule ("ac")
               .concat (single_char ('a'), remember ())
@@ -147,5 +152,5 @@ TEST_F (Rule, OptionalNotPresent) {
               .concat (single_char ('c'), remember ())
               .done ();
   EXPECT_TRUE (ok);
-  EXPECT_THAT (output_, ElementsAre ("a", "c"));
+  EXPECT_THAT (output, ElementsAre ("a", "c"));
 }

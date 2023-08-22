@@ -148,10 +148,19 @@ function (setup_target target)
 
 endfunction (setup_target)
 
-add_library (urilib STATIC uri.hpp rule.hpp rule.cpp)
+#           _   _ _ _
+#  _  _ _ _(_) | (_) |__
+# | || | '_| | | | | '_ \
+#  \_,_|_| |_| |_|_|_.__/
+#
+add_library (urilib STATIC rule.cpp rule.hpp uri.cpp uri.hpp)
 setup_target (urilib)
 
-
+#            _ _     _          _
+#  _  _ _ _ (_) |_  | |_ ___ __| |_
+# | || | ' \| |  _| |  _/ -_|_-<  _|
+#  \_,_|_||_|_|\__|  \__\___/__/\__|
+#
 setup_gtest ()
 add_executable (unittest test_rule.cpp)
 target_link_libraries (unittest urilib gmock_main)
@@ -167,7 +176,11 @@ target_compile_options (
     $<$<CXX_COMPILER_ID:MSVC>:${msvc_options}>
 )
 
-
+#           _           _ _ _     _            _
+#  _  _ _ _(_)  ____ __| (_) |_  | |_ ___  ___| |
+# | || | '_| | (_-< '_ \ | |  _| |  _/ _ \/ _ \ |
+#  \_,_|_| |_| /__/ .__/_|_|\__|  \__\___/\___/_|
+#                 |_|
 add_executable (uri main.cpp)
 setup_target (uri)
 target_link_libraries (uri PUBLIC urilib)

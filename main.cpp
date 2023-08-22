@@ -164,17 +164,16 @@ std::vector<std::string> remove_dot_segments (std::string_view in) {
 }
 #endif
 
-void read_stream (std::istream& is) {
+bool read_stream (std::istream& is) {
   std::string line;
   while (getline (is, line)) {
     std::cout << "URI: " << line << '\n';
 
-    uri x;
-    auto r = x.uri_rule (line);
+    auto r = uri_rule (line);
     if (!r) {
-      std::exit (EXIT_FAILURE);
+      return false;
     }
-    auto value_or_none = [] (std::optional<std::string> const s) {
+    auto value_or_none = [] (std::optional<std::string> const& s) {
       return s ? "\""s + s.value () + "\""s : "None"s;
     };
     std::cout << " scheme: " << value_or_none (r->scheme) << '\n'
@@ -189,27 +188,32 @@ void read_stream (std::istream& is) {
     std::cout << " query: " << value_or_none (r->query) << '\n';
     std::cout << " fragment: " << value_or_none (r->fragment) << '\n';
   }
+  return true;
 }
 
 }  // end anonymous namespace
 
 int main (int argc, char const* argv[]) {
+  int exit_code = EXIT_SUCCESS;
   if (argc == 1) {
     // read_stream (std::cin);
     std::istringstream in{"Z://-@[b8::C:AB:2b]:16?%FC:"};
-    read_stream (in);
+    if (!read_stream (in)) {
+      exit_code = EXIT_FAILURE;
+    }
   } else {
     for (int arg = 1; arg < argc; ++arg) {
       std::filesystem::path const p = argv[arg];
       std::ifstream infile{p};
       if (!infile.is_open ()) {
         std::cerr << "Error: couldn't open " << p << '\n';
-        std::exit (EXIT_FAILURE);
+        exit_code = EXIT_FAILURE;
+      } else {
+        read_stream (infile);
       }
-      read_stream (infile);
     }
   }
-  return EXIT_SUCCESS;
+  return exit_code;
 }
 
 #if 0

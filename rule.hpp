@@ -21,13 +21,6 @@ public:
   using acceptor_container = std::vector<
     std::tuple<std::function<void (std::string_view)>, std::string_view>>;
 
-private:
-  rule (std::optional<std::string_view> string,
-        acceptor_container const& acceptors)
-      : tail_{string}, acceptors_{acceptors} {}
-  rule () = default;
-
-public:
   explicit rule (std::string_view string) : tail_{string} {}
   rule (rule const& rhs) = default;
   rule (rule&& rhs) noexcept = default;
@@ -36,32 +29,20 @@ public:
   rule& operator= (rule const& rhs) = default;
   rule& operator= (rule&& rhs) noexcept = default;
 
-  bool done () {
-    if (!tail_ || !tail_->empty ()) {
-      return false;
-    }
-    std::for_each (std::begin (acceptors_), std::end (acceptors_),
-                   [] (acceptor_container::value_type const& a) {
-                     std::get<0> (a) (std::get<1> (a));
-                   });
-    return true;
-  }
+  bool done ();
 
   template <typename MatchFunction, typename AcceptFunction,
             typename = std::enable_if_t<
               std::is_invocable_v<MatchFunction, rule&&> &&
               std::is_invocable_v<AcceptFunction, std::string_view>>>
-  rule concat (MatchFunction match, AcceptFunction accept) {
+  [[nodiscard]] rule concat (MatchFunction match, AcceptFunction accept) const {
     return concat_impl (match, accept, false);
-  }
-
-  static void accept_nop (std::string_view) { /* do nothing */
   }
 
   template <
     typename MatchFunction,
     typename = std::enable_if_t<std::is_invocable_v<MatchFunction, rule&&>>>
-  rule concat (MatchFunction match) {
+  [[nodiscard]] rule concat (MatchFunction match) const {
     return concat_impl (match, &rule::accept_nop, false);
   }
 
@@ -69,12 +50,13 @@ public:
             typename = std::enable_if_t<
               std::is_invocable_v<MatchFunction, rule&&> &&
               std::is_invocable_v<AcceptFunction, std::string_view>>>
-  rule optional (MatchFunction match, AcceptFunction accept);
+  [[nodiscard]] rule optional (MatchFunction match,
+                               AcceptFunction accept) const;
 
   template <
     typename MatchFunction,
     typename = std::enable_if_t<std::is_invocable_v<MatchFunction, rule&&>>>
-  rule optional (MatchFunction match);
+  [[nodiscard]] rule optional (MatchFunction match) const;
 
   // Variable Repetition:  *Rule
   //
@@ -92,38 +74,61 @@ public:
   template <
     typename MatchFunction,
     typename = std::enable_if_t<std::is_invocable_v<MatchFunction, rule&&>>>
-  rule star (MatchFunction match, unsigned min = 0,
-             unsigned max = std::numeric_limits<unsigned>::max ());
+  [[nodiscard]] rule star (
+    MatchFunction match, unsigned min = 0,
+    unsigned max = std::numeric_limits<unsigned>::max ()) const;
 
-  rule alternative () { return {}; }
+  [[nodiscard]] static rule alternative () { return {}; }
   template <typename MatchFunction, typename... Rest>
-  rule alternative (MatchFunction match, Rest&&... rest);
+  [[nodiscard]] rule alternative (MatchFunction match, Rest&&... rest) const;
 
-  constexpr std::optional<std::string_view> tail () const { return tail_; }
+  [[nodiscard]] constexpr std::optional<std::string_view> tail () const {
+    return tail_;
+  }
 
   using matched_result =
     std::optional<std::tuple<std::string_view, acceptor_container>>;
 
-  matched_result matched (char const* name, rule const& in) const;
+  [[nodiscard]] matched_result matched (char const* name, rule const& in) const;
 
   template <typename Predicate>
-  matched_result single_char (Predicate pred) const;
-  matched_result single_char (char const c) const {
+  [[nodiscard]] matched_result single_char (Predicate pred) const;
+  [[nodiscard]] matched_result single_char (char const c) const {
     return single_char ([c2 = std::tolower (static_cast<int> (c))] (char d) {
       return c2 == std::tolower (static_cast<int> (d));
     });
   }
 
 private:
-  template <typename MatchFunction, typename AcceptFunction>
-  rule concat_impl (MatchFunction match, AcceptFunction accept, bool optional);
+  rule (std::optional<std::string_view> tail, acceptor_container acceptors)
+      : tail_{tail}, acceptors_{std::move (acceptors)} {}
+  rule () = default;
 
-  rule join_rule (matched_result::value_type const& m) {
+  template <typename MatchFunction, typename AcceptFunction>
+  rule concat_impl (MatchFunction match, AcceptFunction accept,
+                    bool optional) const;
+
+  [[nodiscard]] rule join_rule (matched_result::value_type const& m) const {
     auto const& [head, acc] = m;
-    acceptors_.insert (acceptors_.end (), acc.begin (), acc.end ());
-    return {tail_->substr (head.length ()), acceptors_};
+    acceptor_container sum;
+    sum.reserve (acceptors_.size () + acc.size ());
+    sum.insert (sum.end (), acceptors_.begin (), acceptors_.end ());
+    sum.insert (sum.end (), acc.begin (), acc.end ());
+    return {tail_->substr (head.length ()), sum};
   }
 
+  [[nodiscard]] rule join_rule (rule const& other) const {
+    acceptor_container sum;
+    sum.reserve (acceptors_.size () + other.acceptors_.size ());
+    sum.insert (sum.end (), acceptors_.begin (), acceptors_.end ());
+    sum.insert (sum.end (), other.acceptors_.begin (), other.acceptors_.end ());
+    return {other.tail_, sum};
+  }
+
+  static void accept_nop (std::string_view str) {
+    (void)str;
+    // do nothing.
+  }
   template <typename Function>
   constexpr bool is_nop (Function f) const noexcept;
 
@@ -135,12 +140,13 @@ private:
 // ~~~~
 template <typename MatchFunction, typename>
 rule rule::star (MatchFunction const match, unsigned const min,
-                 unsigned const max) {
+                 unsigned const max) const {
   if (!tail_) {
     return *this;
   }
   auto length = std::string_view::size_type{0};
   std::string_view str = *tail_;
+  auto acc = acceptors_;
   auto count = 0U;
   for (;;) {
     matched_result const m = match (rule{str});
@@ -156,19 +162,19 @@ rule rule::star (MatchFunction const match, unsigned const min,
     length += l;
 
     auto const& a = std::get<acceptor_container> (*m);
-    acceptors_.insert (acceptors_.end (), a.begin (), a.end ());
+    acc.insert (acc.end (), a.begin (), a.end ());
   }
   if (count < min) {
     return {};
   }
 
-  return {tail_->substr (length), acceptors_};
+  return {tail_->substr (length), std::move (acc)};
 }
 
 // alternative
 // ~~~~~~~~~~~
 template <typename MatchFunction, typename... Rest>
-rule rule::alternative (MatchFunction match, Rest&&... rest) {
+rule rule::alternative (MatchFunction match, Rest&&... rest) const {
   if (!tail_) {
     // If matching has already failed, then pass that condition down the chain.
     return *this;
@@ -193,7 +199,7 @@ constexpr bool rule::is_nop (Function f) const noexcept {
 // optional
 // ~~~~~~~~
 template <typename MatchFunction, typename AcceptFunction, typename>
-rule rule::optional (MatchFunction match, AcceptFunction accept) {
+rule rule::optional (MatchFunction match, AcceptFunction accept) const {
   if (!tail_) {
     return *this;  // If matching previously failed, yield failure.
   }
@@ -201,13 +207,11 @@ rule rule::optional (MatchFunction match, AcceptFunction accept) {
   if (!res.tail_) {
     return *this;  // The rule failed, so carry on as if nothing happened.
   }
-  acceptors_.insert (acceptors_.end (), res.acceptors_.begin (),
-                     res.acceptors_.end ());
-  return {res.tail_, acceptors_};
+  return join_rule (res);
 }
 
 template <typename MatchFunction, typename>
-rule rule::optional (MatchFunction match) {
+rule rule::optional (MatchFunction match) const {
   return this->optional (match, &rule::accept_nop);
 }
 
@@ -215,7 +219,7 @@ rule rule::optional (MatchFunction match) {
 // ~~~~~~~~~~~
 template <typename MatchFunction, typename AcceptFunction>
 rule rule::concat_impl (MatchFunction match, AcceptFunction accept,
-                        bool optional) {
+                        bool optional) const {
   if (!tail_) {
     // If matching has already failed, then pass that condition down the chain.
     return *this;

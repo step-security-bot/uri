@@ -3,6 +3,17 @@
 #include <iomanip>
 #include <iostream>
 
+bool rule::done () {
+  if (!tail_ || !tail_->empty ()) {
+    return false;
+  }
+  std::for_each (std::begin (acceptors_), std::end (acceptors_),
+                 [] (acceptor_container::value_type const& a) {
+                   std::get<0> (a) (std::get<1> (a));
+                 });
+  return true;
+}
+
 rule::matched_result rule::matched (char const* name, rule const& in) const {
   assert (!tail_ || in.tail_);
   static constexpr auto trace = false;
