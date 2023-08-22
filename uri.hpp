@@ -12,7 +12,7 @@ struct parts {
   std::optional<std::string> userinfo;
   std::optional<std::string> host;
   std::optional<std::string> port;
-  std::vector<std::string> segments;
+  std::vector<std::string> path;
   std::optional<std::string> query;
   std::optional<std::string> fragment;
 };

@@ -368,20 +368,38 @@ auto segment_nz (rule const& r) {
   }
 #endif
 
+class record_str {
+public:
+  explicit constexpr record_str (uri::parts& result) noexcept
+      : result_{result} {}
+  void operator() (std::string_view const str) {
+    result_.path.emplace_back (str);
+  }
+
+private:
+  uri::parts& result_;
+};
+
+class append_segment {
+public:
+  explicit constexpr append_segment (uri::parts& result) noexcept
+      : result_{result} {}
+  void operator() (std::string_view const seg) {
+    assert (!result_.path.empty ());
+    result_.path.back () += seg;
+  }
+
+private:
+  uri::parts& result_;
+};
+
 auto path_abempty (uri::parts& result) {
   // path-abempty  = *( "/" segment )
   return [&result] (rule const& r) {
     return r
       .star ([&result] (rule const& r2) {
-        return r2
-          .concat (solidus,
-                   [&result] (std::string_view const seg) {
-                     result.segments.emplace_back (seg);
-                   })
-          .concat (segment,
-                   [&result] (std::string_view const seg) {
-                     result.segments.back () += seg;
-                   })
+        return r2.concat (solidus, record_str{result})
+          .concat (segment, append_segment{result})
           .matched ("\"/\" segment", r2);
       })
       .matched ("path-abempty", r);
@@ -391,29 +409,14 @@ auto path_abempty (uri::parts& result) {
 auto path_absolute (uri::parts& result) {
   // path-absolute = "/" [ segment-nz *( "/" segment ) ]
   return [&result] (rule const& r) {
-    return r
-      .concat (solidus,
-               [&result] (std::string_view const seg) {
-                 result.segments.emplace_back (seg);
-               })
+    return r.concat (solidus, record_str{result})
       .optional ([&result] (rule const& r1) {
-        return r1
-          .concat (segment_nz,
-                   [&result] (std::string_view seg) {
-                     result.segments.back () += seg;
-                   })
+        return r1.concat (segment_nz, append_segment{result})
           .concat ([&result] (rule const& r2) {
             return r2
               .star ([&result] (rule const& r3) {
-                return r3
-                  .concat (solidus,
-                           [&result] (std::string_view const seg) {
-                             result.segments.emplace_back (seg);
-                           })
-                  .concat (segment,
-                           [&result] (std::string_view const seg) {
-                             result.segments.back () += seg;
-                           })
+                return r3.concat (solidus, record_str{result})
+                  .concat (segment, append_segment{result})
                   .matched ("\"/\" segment", r3);
               })
               .matched ("*( \"/\" segment )", r2);
@@ -432,21 +435,10 @@ auto path_empty (rule const& r) {
 // path-rootless = segment-nz *( "/" segment )
 auto path_rootless (uri::parts& result) {
   return [&result] (rule const& r) {
-    return r
-      .concat (segment_nz,
-               [&result] (std::string_view const seg) {
-                 result.segments.emplace_back (seg);
-               })
+    return r.concat (segment_nz, record_str{result})
       .star ([&result] (rule const& r1) {
-        return r1
-          .concat (solidus,
-                   [&result] (std::string_view const seg) {
-                     result.segments.emplace_back (seg);
-                   })
-          .concat (segment,
-                   [&result] (std::string_view const seg) {
-                     result.segments.back () += seg;
-                   })
+        return r1.concat (solidus, record_str{result})
+          .concat (segment, append_segment{result})
           .matched ("\"/\" segment", r1);
       })
       .matched ("path-rootless", r);

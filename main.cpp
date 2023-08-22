@@ -180,7 +180,7 @@ bool read_stream (std::istream& is) {
               << " host: " << value_or_none (r->host) << '\n'
               << " port: " << value_or_none (r->port) << '\n';
     std::string path;
-    for (auto const& s : r->segments) {
+    for (auto const& s : r->path) {
       path += s;
     }
     std::cout << " path: " << std::quoted (path) << '\n';

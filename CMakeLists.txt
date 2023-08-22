@@ -162,7 +162,7 @@ setup_target (urilib)
 #  \_,_|_||_|_|\__|  \__\___/__/\__|
 #
 setup_gtest ()
-add_executable (unittest test_rule.cpp)
+add_executable (unittest test_uri.cpp test_rule.cpp)
 target_link_libraries (unittest urilib gmock_main)
 setup_target (unittest)
 set (clang_options -Wno-global-constructors -Wno-used-but-marked-unused)
