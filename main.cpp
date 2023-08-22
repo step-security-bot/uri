@@ -1,7 +1,6 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <sstream>
 
 #include "uri.hpp"
 
@@ -195,23 +194,28 @@ bool read_stream (std::istream& is) {
 
 int main (int argc, char const* argv[]) {
   int exit_code = EXIT_SUCCESS;
-  if (argc == 1) {
-    // read_stream (std::cin);
-    std::istringstream in{"Z://-@[b8::C:AB:2b]:16?%FC:"};
-    if (!read_stream (in)) {
-      exit_code = EXIT_FAILURE;
+  try {
+    if (argc == 1) {
+      return read_stream (std::cin) ? EXIT_SUCCESS : EXIT_FAILURE;
     }
-  } else {
+
     for (int arg = 1; arg < argc; ++arg) {
       std::filesystem::path const p = argv[arg];
       std::ifstream infile{p};
       if (!infile.is_open ()) {
         std::cerr << "Error: couldn't open " << p << '\n';
-        exit_code = EXIT_FAILURE;
-      } else {
-        read_stream (infile);
+        return EXIT_FAILURE;
+      }
+      if (!read_stream (infile)) {
+        return EXIT_FAILURE;
       }
     }
+  } catch (std::exception const& ex) {
+    std::cerr << "Error: " << ex.what () << '\n';
+    exit_code = EXIT_FAILURE;
+  } catch (...) {
+    std::cerr << "An unknown error occurred\n";
+    exit_code = EXIT_FAILURE;
   }
   return exit_code;
 }
