@@ -20,6 +20,8 @@ class rule {
 public:
   using acceptor_container = std::vector<
     std::tuple<std::function<void (std::string_view)>, std::string_view>>;
+  using matched_result =
+    std::optional<std::tuple<std::string_view, acceptor_container>>;
 
   explicit rule (std::string_view string) : tail_{string} {}
   rule (rule const& rhs) = default;
@@ -29,7 +31,7 @@ public:
   rule& operator= (rule const& rhs) = default;
   rule& operator= (rule&& rhs) noexcept = default;
 
-  bool done ();
+  bool done () const;
 
   template <typename MatchFunction, typename AcceptFunction,
             typename = std::enable_if_t<
@@ -86,9 +88,6 @@ public:
     return tail_;
   }
 
-  using matched_result =
-    std::optional<std::tuple<std::string_view, acceptor_container>>;
-
   [[nodiscard]] matched_result matched (char const* name, rule const& in) const;
 
   template <typename Predicate>
@@ -102,7 +101,7 @@ public:
 private:
   rule (std::optional<std::string_view> tail, acceptor_container acceptors)
       : tail_{tail}, acceptors_{std::move (acceptors)} {}
-  rule () = default;
+  rule () noexcept = default;
 
   template <typename MatchFunction, typename AcceptFunction>
   rule concat_impl (MatchFunction match, AcceptFunction accept,

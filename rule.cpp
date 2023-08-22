@@ -3,7 +3,7 @@
 #include <iomanip>
 #include <iostream>
 
-bool rule::done () {
+bool rule::done () const {
   if (!tail_ || !tail_->empty ()) {
     return false;
   }
