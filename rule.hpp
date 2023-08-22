@@ -188,7 +188,7 @@ rule rule::alternative (MatchFunction match, Rest&&... rest) const {
 template <typename Function>
 constexpr bool rule::is_nop (Function f) const noexcept {
   if constexpr (std::is_pointer_v<Function>) {
-    if (f == rule::accept_nop) {
+    if (f == &rule::accept_nop) {
       return true;
     }
   }
