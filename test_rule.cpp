@@ -18,7 +18,7 @@ struct Rule : public testing::Test {
 };
 // NOLINTNEXTLINE
 TEST_F (Rule, Concat) {
-  bool ok =
+  bool const ok =
     rule ("ab")
       .concat ([] (rule const& r) { return r.single_char ('a'); }, remember ())
       .concat ([] (rule const& r) { return r.single_char ('b'); }, remember ())
@@ -28,7 +28,7 @@ TEST_F (Rule, Concat) {
 }
 // NOLINTNEXTLINE
 TEST_F (Rule, ConcatAcceptorOrder) {
-  bool ok =
+  bool const ok =
     rule ("ab")
       .concat (
         [this] (rule const& r) {
@@ -48,7 +48,7 @@ TEST_F (Rule, ConcatAcceptorOrder) {
 }
 // NOLINTNEXTLINE
 TEST_F (Rule, FirstAlternative) {
-  bool ok =
+  bool const ok =
     rule ("ab")
       .concat (single_char ('a'), remember ())
       .alternative (
@@ -64,7 +64,7 @@ TEST_F (Rule, FirstAlternative) {
 }
 // NOLINTNEXTLINE
 TEST_F (Rule, SecondAlternative) {
-  bool ok =
+  bool const ok =
     rule ("ac")
       .concat (single_char ('a'), remember ())
       .alternative (
@@ -80,7 +80,7 @@ TEST_F (Rule, SecondAlternative) {
 }
 // NOLINTNEXTLINE
 TEST_F (Rule, AlternativeFail) {
-  bool ok =
+  bool const ok =
     rule ("ad")
       .concat (single_char ('a'), remember ())
       .alternative (
@@ -96,7 +96,7 @@ TEST_F (Rule, AlternativeFail) {
 }
 // NOLINTNEXTLINE
 TEST_F (Rule, Star) {
-  bool ok =
+  bool const ok =
     rule ("aaa")
       .star ([this] (rule const& r) {
         return r.concat (single_char ('a'), remember ()).matched ("a", r);
@@ -107,7 +107,7 @@ TEST_F (Rule, Star) {
 }
 // NOLINTNEXTLINE
 TEST_F (Rule, StarConcat) {
-  bool ok =
+  bool const ok =
     rule ("aaab")
       .star ([this] (rule const& r) {
         return r.concat (single_char ('a'), remember ()).matched ("a", r);
@@ -119,7 +119,7 @@ TEST_F (Rule, StarConcat) {
 }
 // NOLINTNEXTLINE
 TEST_F (Rule, Star2) {
-  bool ok =
+  bool const ok =
     rule ("/")
       .star ([this] (rule const& r1) {
         return r1.concat (single_char ('/'), remember ())
@@ -136,21 +136,21 @@ TEST_F (Rule, Star2) {
 }
 // NOLINTNEXTLINE
 TEST_F (Rule, OptionalPresent) {
-  bool ok = rule ("abc")
-              .concat (single_char ('a'), remember ())
-              .optional (single_char ('b'), remember ())
-              .concat (single_char ('c'), remember ())
-              .done ();
+  bool const ok = rule ("abc")
+                    .concat (single_char ('a'), remember ())
+                    .optional (single_char ('b'), remember ())
+                    .concat (single_char ('c'), remember ())
+                    .done ();
   EXPECT_TRUE (ok);
   EXPECT_THAT (output, ElementsAre ("a", "b", "c"));
 }
 // NOLINTNEXTLINE
 TEST_F (Rule, OptionalNotPresent) {
-  bool ok = rule ("ac")
-              .concat (single_char ('a'), remember ())
-              .optional (single_char ('b'), remember ())
-              .concat (single_char ('c'), remember ())
-              .done ();
+  bool const ok = rule ("ac")
+                    .concat (single_char ('a'), remember ())
+                    .optional (single_char ('b'), remember ())
+                    .concat (single_char ('c'), remember ())
+                    .done ();
   EXPECT_TRUE (ok);
   EXPECT_THAT (output, ElementsAre ("a", "c"));
 }
