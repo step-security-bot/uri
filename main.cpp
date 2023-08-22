@@ -169,7 +169,7 @@ bool read_stream (std::istream& is) {
   while (getline (is, line)) {
     std::cout << "URI: " << line << '\n';
 
-    auto r = uri_rule (line);
+    auto r = uri::split (line);
     if (!r) {
       return false;
     }

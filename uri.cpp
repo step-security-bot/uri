@@ -290,7 +290,7 @@ auto ip_literal (rule const& r) {
     .matched ("IP-literal", r);
 }
 
-auto host_rule (uri_parts& result) {
+auto host_rule (uri::parts& result) {
   // host          = IP-literal / IPv4address / reg-name
   return [&result] (rule const& r) {
     return r
@@ -304,7 +304,7 @@ auto host_rule (uri_parts& result) {
   };
 }
 
-auto userinfo_at (uri_parts& result) {
+auto userinfo_at (uri::parts& result) {
   // userinfo-at = userinfo "@"
   return [&result] (rule const& r) {
     return r
@@ -322,7 +322,7 @@ auto port (rule const& r) {
   return r.star (digit).matched ("port", r);
 }
 
-auto colon_port (uri_parts& result) {
+auto colon_port (uri::parts& result) {
   // colon-port = ":" port
   return [&result] (rule const& r) {
     return r.concat (colon)
@@ -331,7 +331,7 @@ auto colon_port (uri_parts& result) {
   };
 }
 
-auto authority (uri_parts& result) {
+auto authority (uri::parts& result) {
   // authority = [ userinfo "@" ] host [ ":" port ]
   return [&result] (rule const& r) {
     return r.optional (userinfo_at (result))
@@ -368,7 +368,7 @@ auto segment_nz (rule const& r) {
   }
 #endif
 
-auto path_abempty (uri_parts& result) {
+auto path_abempty (uri::parts& result) {
   // path-abempty  = *( "/" segment )
   return [&result] (rule const& r) {
     return r
@@ -388,7 +388,7 @@ auto path_abempty (uri_parts& result) {
   };
 }
 
-auto path_absolute (uri_parts& result) {
+auto path_absolute (uri::parts& result) {
   // path-absolute = "/" [ segment-nz *( "/" segment ) ]
   return [&result] (rule const& r) {
     return r
@@ -430,7 +430,7 @@ auto path_empty (rule const& r) {
 }
 
 // path-rootless = segment-nz *( "/" segment )
-auto path_rootless (uri_parts& result) {
+auto path_rootless (uri::parts& result) {
   return [&result] (rule const& r) {
     return r
       .concat (segment_nz,
@@ -457,7 +457,7 @@ auto path_rootless (uri_parts& result) {
 //               / path-absolute
 //               / path-rootless
 //               / path-empty
-auto hier_part (uri_parts& result) {
+auto hier_part (uri::parts& result) {
   return [&result] (rule const& r) {
     return r
       .alternative (
@@ -489,9 +489,11 @@ auto fragment (rule const& r) {
 
 }  // end anonymous namespace
 
+namespace uri {
+
 // URI           = scheme ":" hier-part [ "?" query ] [ "#" fragment ]
-std::optional<uri_parts> uri_rule (std::string_view const in) {
-  uri_parts result;
+std::optional<parts> split (std::string_view const in) {
+  parts result;
   bool success =
     rule{in}
       .concat (
@@ -520,8 +522,8 @@ std::optional<uri_parts> uri_rule (std::string_view const in) {
           .matched ("\"#\" fragment", rf);
       })
       .done ();
-  if (success) {
-    return result;
-  }
-  return {};
+  return success ? std::optional<parts>{std::move (result)}
+                 : std::optional<parts>{std::nullopt};
 }
+
+}  // end namespace uri

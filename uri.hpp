@@ -2,11 +2,12 @@
 #define URI_HPP
 
 #include <string>
-#include <vector>
 
 #include "rule.hpp"
 
-struct uri_parts {
+namespace uri {
+
+struct parts {
   std::optional<std::string> scheme;
   std::optional<std::string> userinfo;
   std::optional<std::string> host;
@@ -16,6 +17,8 @@ struct uri_parts {
   std::optional<std::string> fragment;
 };
 
-std::optional<uri_parts> uri_rule (std::string_view in);
+std::optional<parts> split (std::string_view in);
 
-#endif /* uri_h */
+}  // end namespace uri
+
+#endif  // URI_HPP
