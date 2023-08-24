@@ -10,6 +10,7 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     env:
+      BUILD_DIR: build_codecov
       CLANG_VERSION: 14
 
     steps:
