@@ -1,0 +1,73 @@
+name: CodeCov
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened]
+jobs:
+  sonar:
+    name: Build
+    runs-on: ubuntu-latest
+    env:
+      CLANG_VERSION: 14
+
+    steps:
+      - name: Install clang
+        run: |
+          if ! command -v "clang++-${{ env.CLANG_VERSION }}"
+          then
+            wget https://apt.llvm.org/llvm.sh
+            # Force --yes to the end of the add-apt-repository command to
+            # prevent the llvm.sh script hanging.
+            sed -ie "/^add-apt-repository/ s/$/ --yes/" llvm.sh
+            chmod +x llvm.sh
+            sudo ./llvm.sh "$CLANG_VERSION" all
+          fi
+
+      - uses: actions/checkout@v3
+        with:
+          submodules: 'True'
+
+      - name: Install libc++, libc++abc, and ninja
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake \
+            libc++-dev \
+            libc++abi-dev \
+            ninja-build
+
+      - name: Configure build
+        run: |
+          mkdir "$BUILD_DIR"
+          cmake                                            \
+            -G Ninja                                       \
+            -S .                                           \
+            -B "$BUILD_DIR"                                \
+            -D COVERAGE=Yes                                \
+            -D CMAKE_C_COMPILER="clang-$CLANG_VERSION"     \
+            -D CMAKE_CXX_COMPILER="clang++-$CLANG_VERSION" \
+            -D CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold
+
+      - name: Build
+        run: |
+            cmake --build "$BUILD_DIR"
+
+      - name: Index the raw profile
+        run: |
+          "llvm-profdata-$CLANG_VERSION" merge   \
+            --sparse                             \
+            $(find "$BUILD_DIR" -name \*.profraw) \
+            -o "$BUILD_DIR/merged.profdata"
+
+      #- name: Collect the coverage
+      #  run: |
+      #    "llvm-cov-$CLANG_VERSION" show \
+      #      --instr-profile "$BUILD_DIR/merged.profdata" \
+      #      "$BUILD_DIR/unittests/pj-unittests" > coverage.txt
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v3
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
