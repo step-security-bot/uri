@@ -118,6 +118,7 @@ function (setup_target target)
   endif ()
 
   if (COVERAGE)
+    list (APPEND gcc_options -fprofile-arcs -ftest-coverage)
     list (APPEND clang_options -fprofile-instr-generate -fcoverage-mapping)
   endif ()
   if (LIBCXX)

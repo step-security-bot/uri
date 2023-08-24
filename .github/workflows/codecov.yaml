@@ -11,21 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BUILD_DIR: build_codecov
-      CLANG_VERSION: 14
+      GCC_VERSION: 12
 
     steps:
-      - name: Install clang
-        run: |
-          if ! command -v "clang++-${{ env.CLANG_VERSION }}"
-          then
-            wget https://apt.llvm.org/llvm.sh
-            # Force --yes to the end of the add-apt-repository command to
-            # prevent the llvm.sh script hanging.
-            sed -ie "/^add-apt-repository/ s/$/ --yes/" llvm.sh
-            chmod +x llvm.sh
-            sudo ./llvm.sh "$CLANG_VERSION" all
-          fi
-
       - uses: actions/checkout@v3
         with:
           submodules: 'True'
@@ -33,34 +21,22 @@ jobs:
       - name: Install libc++, libc++abc, and ninja
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            cmake \
-            libc++-dev \
-            libc++abi-dev \
-            ninja-build
+          sudo apt-get install -y cmake ninja-build
 
       - name: Configure build
         run: |
           mkdir "$BUILD_DIR"
-          cmake                                            \
-            -G Ninja                                       \
-            -S .                                           \
-            -B "$BUILD_DIR"                                \
-            -D COVERAGE=Yes                                \
-            -D CMAKE_C_COMPILER="clang-$CLANG_VERSION"     \
-            -D CMAKE_CXX_COMPILER="clang++-$CLANG_VERSION" \
-            -D CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold
+          cmake                                      \
+            -G Ninja                                 \
+            -S .                                     \
+            -B "$BUILD_DIR"                          \
+            -D COVERAGE=Yes                          \
+            -D CMAKE_C_COMPILER="gcc-$GCC_VERSION"   \
+            -D CMAKE_CXX_COMPILER="g++-$GCC_VERSION"
 
       - name: Build
         run: |
             cmake --build "$BUILD_DIR"
-
-      - name: Index the raw profile
-        run: |
-          "llvm-profdata-$CLANG_VERSION" merge   \
-            --sparse                             \
-            $(find "$BUILD_DIR" -name \*.profraw) \
-            -o "$BUILD_DIR/merged.profdata"
 
       #- name: Collect the coverage
       #  run: |
