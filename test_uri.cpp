@@ -9,6 +9,18 @@
 
 using testing::ElementsAre;
 // NOLINTNEXTLINE
+TEST (Uri, Empty) {
+  std::optional<uri::parts> const x = uri::split ("");
+  ASSERT_TRUE (x);
+  EXPECT_FALSE (x->scheme);
+  EXPECT_FALSE (x->userinfo);
+  EXPECT_FALSE (x->host);
+  EXPECT_FALSE (x->port);
+  EXPECT_TRUE (x->path.empty ());
+  EXPECT_FALSE (x->query);
+  EXPECT_FALSE (x->fragment);
+}
+// NOLINTNEXTLINE
 TEST (Uri, 0001) {
   auto const x = uri::split ("C://[::A:eE5c]:2194/&///@//:_/%aB//.////#");
   ASSERT_TRUE (x);
@@ -1093,6 +1105,7 @@ TEST (Uri, 0090) {
   EXPECT_FALSE (x->query);
   EXPECT_EQ (x->fragment, "");
 }
+// NOLINTNEXTLINE
 TEST (Uri, 0091) {
   auto const x = uri::split ("L:?#");
   ASSERT_TRUE (x);
@@ -1104,6 +1117,7 @@ TEST (Uri, 0091) {
   EXPECT_EQ (x->query, "");
   EXPECT_EQ (x->fragment, "");
 }
+// NOLINTNEXTLINE
 TEST (Uri, 0092) {
   auto const x = uri::split ("g-:#");
   ASSERT_TRUE (x);
@@ -1115,6 +1129,7 @@ TEST (Uri, 0092) {
   EXPECT_FALSE (x->query);
   EXPECT_EQ (x->fragment, "");
 }
+// NOLINTNEXTLINE
 TEST (Uri, 0093) {
   auto const x = uri::split ("H:");
   ASSERT_TRUE (x);
@@ -1126,6 +1141,7 @@ TEST (Uri, 0093) {
   EXPECT_FALSE (x->query);
   EXPECT_FALSE (x->fragment);
 }
+// NOLINTNEXTLINE
 TEST (Uri, 0094) {
   auto const x = uri::split (R"(K:??)");
   ASSERT_TRUE (x);
@@ -1137,6 +1153,7 @@ TEST (Uri, 0094) {
   EXPECT_EQ (x->query, "?");
   EXPECT_FALSE (x->fragment);
 }
+// NOLINTNEXTLINE
 TEST (Uri, 0095) {
   auto const x = uri::split (R"(c-:?#)");
   ASSERT_TRUE (x);
@@ -1148,6 +1165,7 @@ TEST (Uri, 0095) {
   EXPECT_EQ (x->query, "");
   EXPECT_EQ (x->fragment, "");
 }
+// NOLINTNEXTLINE
 TEST (Uri, 0096) {
   auto const x = uri::split ("Bw:?");
   ASSERT_TRUE (x);
@@ -1159,6 +1177,7 @@ TEST (Uri, 0096) {
   EXPECT_EQ (x->query, "");
   EXPECT_FALSE (x->fragment);
 }
+// NOLINTNEXTLINE
 TEST (Uri, 0097) {
   auto const x = uri::split ("hC:?");
   ASSERT_TRUE (x);
@@ -1170,6 +1189,7 @@ TEST (Uri, 0097) {
   EXPECT_EQ (x->query, "");
   EXPECT_FALSE (x->fragment);
 }
+// NOLINTNEXTLINE
 TEST (Uri, 0098) {
   auto const x = uri::split ("q:?/#/");
   ASSERT_TRUE (x);
@@ -1181,6 +1201,7 @@ TEST (Uri, 0098) {
   EXPECT_EQ (x->query, "/");
   EXPECT_EQ (x->fragment, "/");
 }
+// NOLINTNEXTLINE
 TEST (Uri, 0099) {
   auto const x = uri::split ("L:");
   ASSERT_TRUE (x);
@@ -1192,6 +1213,7 @@ TEST (Uri, 0099) {
   EXPECT_FALSE (x->query);
   EXPECT_FALSE (x->fragment);
 }
+// NOLINTNEXTLINE
 TEST (Uri, 0100) {
   auto const x = uri::split ("W-:?");
   ASSERT_TRUE (x);
@@ -1202,4 +1224,153 @@ TEST (Uri, 0100) {
   EXPECT_TRUE (x->path.empty ());
   EXPECT_EQ (x->query, "");
   EXPECT_FALSE (x->fragment);
+}
+
+// NOLINTNEXTLINE
+TEST (RemoveDotSegments, LeadingDotDotSlash) {
+  auto const x = uri::split ("../bar");
+  ASSERT_TRUE (x);
+  EXPECT_THAT (x->path, ElementsAre ("..", "/bar"));
+  EXPECT_THAT (uri::remove_dot_segments (x->path), ElementsAre ("bar"));
+}
+// NOLINTNEXTLINE
+TEST (RemoveDotSegments, LeadingDotSlash) {
+  auto const x = uri::split ("./bar");
+  ASSERT_TRUE (x);
+  EXPECT_THAT (x->path, ElementsAre (".", "/bar"));
+  EXPECT_THAT (uri::remove_dot_segments (x->path), ElementsAre ("bar"));
+}
+// NOLINTNEXTLINE
+TEST (RemoveDotSegments, LeadingDotDotSlashDotSlash) {
+  auto const x = uri::split (".././bar");
+  ASSERT_TRUE (x);
+  EXPECT_THAT (x->path, ElementsAre ("..", "/.", "/bar"));
+  EXPECT_THAT (uri::remove_dot_segments (x->path), ElementsAre ("bar"));
+}
+// NOLINTNEXTLINE
+TEST (RemoveDotSegments, MidDot) {
+  auto const x = uri::split ("/foo/./bar");
+  ASSERT_TRUE (x);
+  EXPECT_THAT (x->path, ElementsAre ("/foo", "/.", "/bar"));
+  EXPECT_THAT (uri::remove_dot_segments (x->path),
+               ElementsAre ("/foo", "/bar"));
+}
+// NOLINTNEXTLINE
+TEST (RemoveDotSegments, TrailingSlashDotSlash) {
+  auto const x = uri::split ("/bar/./");
+  ASSERT_TRUE (x);
+  EXPECT_THAT (x->path, ElementsAre ("/bar", "/.", "/"));
+  EXPECT_THAT (uri::remove_dot_segments (x->path), ElementsAre ("/bar", "/"));
+}
+// NOLINTNEXTLINE
+TEST (RemoveDotSegments, LonelySlashDot) {
+  auto const x = uri::split ("/.");
+  ASSERT_TRUE (x);
+  EXPECT_THAT (x->path, ElementsAre ("/."));
+  EXPECT_THAT (uri::remove_dot_segments (x->path), ElementsAre ("/"));
+}
+// NOLINTNEXTLINE
+TEST (RemoveDotSegments, TrailingDot) {
+  auto const x = uri::split ("/bar/./");
+  ASSERT_TRUE (x);
+  EXPECT_THAT (x->path, ElementsAre ("/bar", "/.", "/"));
+  EXPECT_THAT (uri::remove_dot_segments (x->path), ElementsAre ("/bar", "/"));
+}
+// NOLINTNEXTLINE
+TEST (RemoveDotSegments, MidSlashDotDot) {
+  auto const x = uri::split ("/foo/../bar");
+  ASSERT_TRUE (x);
+  EXPECT_THAT (x->path, ElementsAre ("/foo", "/..", "/bar"));
+  EXPECT_THAT (uri::remove_dot_segments (x->path), ElementsAre ("/bar"));
+}
+// NOLINTNEXTLINE
+TEST (RemoveDotSegments, TrailingDotDotSlash) {
+  auto const x = uri::split ("/bar/../");
+  ASSERT_TRUE (x);
+  EXPECT_THAT (x->path, ElementsAre ("/bar", "/..", "/"));
+  EXPECT_THAT (uri::remove_dot_segments (x->path), ElementsAre ("/"));
+}
+// NOLINTNEXTLINE
+TEST (RemoveDotSegments, LonelySlashDotDot) {
+  auto const x = uri::split ("/..");
+  ASSERT_TRUE (x);
+  EXPECT_THAT (x->path, ElementsAre ("/.."));
+  EXPECT_THAT (uri::remove_dot_segments (x->path), ElementsAre ("/"));
+}
+// NOLINTNEXTLINE
+TEST (RemoveDotSegments, TrailingSlashDotDot) {
+  auto const x = uri::split ("/bar/..");
+  ASSERT_TRUE (x);
+  EXPECT_THAT (x->path, ElementsAre ("/bar", "/.."));
+  EXPECT_THAT (uri::remove_dot_segments (x->path), ElementsAre ("/"));
+}
+// NOLINTNEXTLINE
+TEST (RemoveDotSegments, TwoDirectoriesTrailingSlashDotDot) {
+  auto const x = uri::split ("/foo/bar/..");
+  ASSERT_TRUE (x);
+  EXPECT_THAT (x->path, ElementsAre ("/foo", "/bar", "/.."));
+  EXPECT_THAT (uri::remove_dot_segments (x->path), ElementsAre ("/foo", "/"));
+}
+// NOLINTNEXTLINE
+TEST (RemoveDotSegments, LonelyDot) {
+  auto const x = uri::split (".");
+  ASSERT_TRUE (x);
+  EXPECT_THAT (x->path, ElementsAre ("."));
+  EXPECT_THAT (uri::remove_dot_segments (x->path), ElementsAre ());
+}
+// NOLINTNEXTLINE
+TEST (RemoveDotSegments, LonelyDotDot) {
+  auto const x = uri::split ("..");
+  ASSERT_TRUE (x);
+  EXPECT_THAT (x->path, ElementsAre (".."));
+  EXPECT_THAT (uri::remove_dot_segments (x->path), ElementsAre ());
+}
+// NOLINTNEXTLINE
+TEST (RemoveDotSegments, LonelyDotDotSlashDot) {
+  auto const x = uri::split ("../.");
+  ASSERT_TRUE (x);
+  EXPECT_THAT (x->path, ElementsAre ("..", "/."));
+  EXPECT_THAT (uri::remove_dot_segments (x->path), ElementsAre ("/"));
+}
+
+// NOLINTNEXTLINE
+TEST (UriPercentDecode, None) {
+  EXPECT_EQ (uri::percent_decode ("abcdef"), "abcdef");
+}
+// NOLINTNEXTLINE
+TEST (UriPercentDecode, TwoEncodedCharacters) {
+  EXPECT_EQ (uri::percent_decode ("a%62%63def"), "abcdef");
+}
+// NOLINTNEXTLINE
+TEST (UriPercentDecode, LowerHex) {
+  EXPECT_EQ (uri::percent_decode ("a%7ad"), "azd");
+}
+// NOLINTNEXTLINE
+TEST (UriPercentDecode, UpperHex) {
+  EXPECT_EQ (uri::percent_decode ("a%7Ad"), "azd");
+}
+// NOLINTNEXTLINE
+TEST (UriPercentDecode, LonelyPercent) {
+  EXPECT_EQ (uri::percent_decode ("ab%"), "ab%");
+}
+// NOLINTNEXTLINE
+TEST (UriPercentDecode, PercentThenNonHexCharacters) {
+  EXPECT_EQ (uri::percent_decode ("ab%zz"), "ab%zz");
+}
+
+// NOLINTNEXTLINE
+TEST (UriNormalize, SchemeAndHostCase) {
+  auto x =
+    uri::split ("HTTP://User@www.EXAMPLE.com/../Path%2fA?Q%75ery#%46ragment");
+  ASSERT_TRUE (x);
+  uri::normalize (*x);
+
+  EXPECT_EQ (x->scheme, "http");           // Lower-case.
+  EXPECT_EQ (x->userinfo, "User");         // Mixed-case.
+  EXPECT_EQ (x->host, "www.example.com");  // lower-case
+  EXPECT_FALSE (x->port);
+  EXPECT_THAT (x->path,
+               ElementsAre ("/Path/A"));  // No dot-segments, Mixed-case.
+  EXPECT_EQ (x->query, "Query");          // Mixed-case
+  EXPECT_EQ (x->fragment, "Fragment");    // Mixed-case.
 }

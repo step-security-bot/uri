@@ -1,5 +1,7 @@
 #include "uri.hpp"
 
+#include "rule.hpp"
+
 namespace {
 
 auto single_colon (rule const& r) {
@@ -353,20 +355,17 @@ auto segment_nz (rule const& r) {
 
 // segment-nz-nc = 1*( unreserved / pct-encoded / sub-delims / "@" )
 //                  ; non-zero-length segment without any colon ":"
-#if 0
-  auto segment_nz_nc (rule const& r) {
-    return r
-      .star (
-        [] (rule const& r2) {
-          return r2
-            .alternative (unreserved, pct_encoded, sub_delims,
-                          commercial_at)
-            .matched ("unreserved / pct-encoded / sub-delims / \"@\"", r2);
-        },
-        1U)
-      .matched ("segment-nz-nc", r);
-  }
-#endif
+auto segment_nz_nc (rule const& r) {
+  return r
+    .star (
+      [] (rule const& r2) {
+        return r2
+          .alternative (unreserved, pct_encoded, sub_delims, commercial_at)
+          .matched ("unreserved / pct-encoded / sub-delims / \"@\"", r2);
+      },
+      1U)
+    .matched ("segment-nz-nc", r);
+}
 
 class record_str {
 public:
@@ -427,6 +426,19 @@ auto path_absolute (uri::parts& result) {
   };
 }
 
+// path-noscheme = segment-nz-nc *( "/" segment )
+auto path_noscheme (uri::parts& result) {
+  return [&result] (rule const& r) {
+    return r.concat (segment_nz_nc, record_str{result})
+      .star ([&result] (rule const& r1) {
+        return r1.concat (solidus, record_str{result})
+          .concat (segment, append_segment{result})
+          .matched ("\"/\" segment", r1);
+      })
+      .matched ("path-noscheme", r);
+  };
+}
+
 // path-empty    = 0<pchar>
 auto path_empty (rule const& r) {
   return r.star (pchar, 0, 0).matched ("path-empty", r);
@@ -442,6 +454,83 @@ auto path_rootless (uri::parts& result) {
           .matched ("\"/\" segment", r1);
       })
       .matched ("path-rootless", r);
+  };
+}
+
+// relative-part = "//" authority path-abempty
+//               / path-absolute
+//               / path-noscheme
+//               / path-empty
+auto relative_part (uri::parts& result) {
+  return [&result] (rule const& r) {
+    return r
+      .alternative (
+        [&result] (rule const& r1) {
+          return r1.concat (solidus)
+            .concat (solidus)
+            .concat (authority (result))
+            .concat (path_abempty (result))
+            .matched (R"("//" authority path-abempty)", r1);
+        },
+        path_absolute (result), path_noscheme (result), path_empty)
+      .matched ("relative-part", r);
+  };
+}
+
+// query         = *( pchar / "/" / "?" )
+auto query (rule const& r) {
+  return r
+    .star ([] (rule const& r2) {
+      return r2.alternative (pchar, solidus, question_mark)
+        .matched (R"(pchar / "/" / "?")", r2);
+    })
+    .matched ("query", r);
+}
+// question-query = "?" query
+auto question_query (uri::parts& result) {
+  return [&result] (rule const& r) {
+    return r
+      .concat (question_mark)  // "?"
+      .concat (query, [&result] (
+                        std::string_view const query) { result.query = query; })
+      .matched ("question-query", r);
+  };
+}
+
+// fragment      = *( pchar / "/" / "?" )
+auto fragment (rule const& r) {
+  return query (r);
+}
+
+// hash-fragment = "#" fragment
+auto hash_fragment (uri::parts& result) {
+  return [&result] (rule const& rf) {
+    return rf.concat (hash)
+      .concat (fragment,
+               [&result] (std::string_view const fragment) {
+                 result.fragment = fragment;
+               })
+      .matched ("hash-fragment", rf);
+  };
+};
+
+// relative-ref  = relative-part [ question-query ] [ hash-fragment ]
+auto relative_ref (uri::parts& result) {
+  return [&result] (rule const& r) {
+    return r.concat (relative_part (result))
+      .optional (question_query (result))
+      .optional ([&result] (rule const& rf) {
+        // "#" fragment
+        return rf
+          .concat (hash)  // "#"
+          .concat (       // fragment
+            fragment,
+            [&result] (std::string_view const fragment) {
+              result.fragment = fragment;
+            })
+          .matched ("\"#\" fragment", rf);
+      })
+      .matched ("relative-ref", r);
   };
 }
 
@@ -465,57 +554,216 @@ auto hier_part (uri::parts& result) {
   };
 }
 
-// query         = *( pchar / "/" / "?" )
-auto query (rule const& r) {
-  return r
-    .star ([] (rule const& r2) {
-      return r2.alternative (pchar, solidus, question_mark)
-        .matched (R"(pchar / "/" / "?")", r2);
-    })
-    .matched ("query", r);
+// URI = scheme ":" hier-part [ "?" query ] [ "#" fragment ]
+auto URI (uri::parts& result) {
+  return [&result] (rule const& r) {
+    return r
+      .concat (
+        scheme,
+        [&result] (std::string_view const scheme) { result.scheme = scheme; })
+      .concat (colon)
+      .concat (hier_part (result))
+      .optional (question_query (result))
+      .optional (hash_fragment (result))
+      .matched ("URI", r);
+  };
 }
-// fragment      = *( pchar / "/" / "?" )
-auto fragment (rule const& r) {
-  return query (r);
+
+// URI-reference = URI / relative-ref
+auto URI_reference (uri::parts& result) {
+  return [&result] (rule const& r) {
+    return r.alternative (URI (result), relative_ref (result))
+      .matched ("URI-reference", r);
+  };
+}
+
+// absolute-URI  = scheme ":" hier-part [ "?" query ]
+auto absolute_URI (uri::parts& result) {
+  return [&result] (rule const& r) {
+    return r
+      .concat (
+        scheme,
+        [&result] (std::string_view const scheme) { result.scheme = scheme; })
+      .concat (colon)
+      .concat (hier_part (result))
+      .optional (question_query (result))
+      .matched ("absolute-URI", r);
+  };
+}
+
+void lowercase (std::string& s) {
+  std::transform (std::begin (s), std::end (s), std::begin (s), [] (char c) {
+    return static_cast<char> (std::tolower (static_cast<int> (c)));
+  });
+}
+
+std::string percent_decode (std::string_view src) {
+  std::string result;
+  result.reserve (src.length ());
+  for (auto pos = src.begin (), end = src.end (); pos != end; ++pos) {
+    if (*pos == '%' && std::distance (pos, end) >= 3 &&
+        std::isxdigit (*(pos + 1)) && std::isxdigit (*(pos + 2))) {
+      auto hex2dec = [] (char c) {
+        return static_cast<unsigned> (c) -
+               static_cast<unsigned> (std::toupper (c) >= 'A' ? 'A' + 10 : '0');
+      };
+      result +=
+        static_cast<char> ((hex2dec (*(pos + 1)) << 4) | hex2dec (*(pos + 2)));
+      pos += 2;
+    } else {
+      result += *pos;
+    }
+  }
+  return result;
+}
+
+bool has_trailing_slash (std::vector<std::string> const& segments) {
+  bool trailing_slash = false;
+  if (segments.size () > 1) {
+    auto const& b = segments.back ();
+    trailing_slash = b == "/" || b == "/." || b == "/..";
+  }
+  return trailing_slash;
 }
 
 }  // end anonymous namespace
 
 namespace uri {
 
-// URI           = scheme ":" hier-part [ "?" query ] [ "#" fragment ]
+// URI-reference = URI / relative-ref
 std::optional<parts> split (std::string_view const in) {
   parts result;
-  bool success =
-    rule{in}
-      .concat (
-        scheme,
-        [&result] (std::string_view const scheme) { result.scheme = scheme; })
-      .concat (colon)
-      .concat (hier_part (result))
-      .optional ([&result] (rule const& rq) {
-        // "?" query
-        return rq
-          .concat (question_mark)  // "?"
-          .concat (
-            query,  // query
-            [&result] (std::string_view const query) { result.query = query; })
-          .matched ("\"?\" query", rq);
-      })
-      .optional ([&result] (rule const& rf) {
-        // "#" fragment
-        return rf
-          .concat (hash)  // "#"
-          .concat (       // fragment
-            fragment,
-            [&result] (std::string_view const fragment) {
-              result.fragment = fragment;
-            })
-          .matched ("\"#\" fragment", rf);
-      })
-      .done ();
-  return success ? std::optional<parts>{std::move (result)}
-                 : std::optional<parts>{std::nullopt};
+  return rule{in}.alternative (URI (result), URI_reference (result)).done ()
+           ? std::optional<parts>{result}
+           : std::optional<parts>{std::nullopt};
+}
+
+// Remove dot segments from the string.
+//
+// See also Section 5.2.4 of RFC 3986.
+// http://tools.ietf.org/html/rfc3986#section-5.2.4
+std::vector<std::string> remove_dot_segments (
+  std::vector<std::string> const& path) {
+  std::vector<std::string> output;
+  output.reserve (path.size ());
+  if (path.empty ()) {
+    return output;
+  }
+
+  bool const leading_slash =
+    !path.front ().empty () && path.front ().front () == '/';
+  bool const trailing_slash = has_trailing_slash (path);
+
+  std::for_each (std::begin (path), std::end (path),
+                 [&output] (std::string const& s) {
+                   if (s == "/." || s == ".") {
+                     // '.' means "the current directory": ignore it.
+                     return;
+                   }
+                   if (s == "/.." || s == "..") {
+                     // ".." is "up one directory" so, if we can, pop the last
+                     // element.
+                     if (!output.empty ()) {
+                       output.pop_back ();
+                     }
+                     return;
+                   }
+                   // Anything else just gets appended to the output.
+                   output.push_back (s);
+                 });
+
+  if (output.empty ()) {
+    if (leading_slash) {
+      output.push_back ("/");
+    }
+  } else {
+    auto& f = output.front ();
+    // If the original path started with a slash, ensure the the output does as
+    // well.
+    if (leading_slash) {
+      if (f.empty () || f.front () != '/') {
+        f.insert (0, "/");
+      }
+    } else {
+      // If the original path didn't start with a slash, match that on the
+      // output.
+      if (!f.empty () && f.front () == '/') {
+        f.erase (0, 1);
+      }
+    }
+  }
+
+  if (trailing_slash && (output.empty () || output.back () != "/")) {
+    output.push_back ("/");
+  }
+  return output;
+}
+
+std::optional<unsigned> hex_to_digit (char const digit) noexcept {
+  if (digit >= 'a' && digit <= 'f') {
+    return static_cast<unsigned> (digit) - ('a' - 10);
+  }
+  if (digit >= 'A' && digit <= 'F') {
+    return static_cast<unsigned> (digit) - ('A' - 10);
+  }
+  if (digit >= '0' && digit <= '9') {
+    return static_cast<unsigned> (digit) - '0';
+  }
+  return {};
+}
+
+std::string percent_decode (std::string_view src) {
+  std::string result;
+  result.reserve (src.length ());
+  for (auto pos = src.begin (), end = src.end (); pos != end; ++pos) {
+    if (*pos == '%' && std::distance (pos, end) >= 3 &&
+        std::isxdigit (*(pos + 1)) && std::isxdigit (*(pos + 2))) {
+      auto hex2dec = [] (char const digit) {
+        if (digit >= 'a' && digit <= 'f') {
+          return static_cast<unsigned> (digit) - ('a' - 10);
+        }
+        if (digit >= 'A' && digit <= 'F') {
+          return static_cast<unsigned> (digit) - ('A' - 10);
+        }
+        return static_cast<unsigned> (digit) - '0';
+      };
+      result +=
+        static_cast<char> ((hex2dec (*(pos + 1)) << 4) | hex2dec (*(pos + 2)));
+      pos += 2;
+    } else {
+      result += *pos;
+    }
+  }
+  return result;
+}
+
+void normalize (parts& p) {
+  if (p.scheme) {
+    lowercase (*p.scheme);
+  }
+  if (p.userinfo) {
+    p.userinfo = percent_decode (*p.userinfo);
+  }
+  if (p.host) {
+    lowercase (*p.host);
+    p.host = percent_decode (*p.host);
+  }
+  p.path = remove_dot_segments (p.path);
+  for (auto& segment : p.path) {
+    segment = percent_decode (segment);
+  }
+  if (p.query) {
+    p.query = percent_decode (*p.query);
+  }
+  if (p.fragment) {
+    p.fragment = percent_decode (*p.fragment);
+  }
+}
+
+void normalize (std::optional<parts>& p) {
+  if (p) {
+    normalize (*p);
+  }
 }
 
 }  // end namespace uri
