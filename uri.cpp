@@ -367,12 +367,14 @@ auto segment_nz_nc (rule const& r) {
     .matched ("segment-nz-nc", r);
 }
 
-class record_str {
+class record_path_abs {
 public:
-  explicit constexpr record_str (uri::parts& result) noexcept
+  explicit constexpr record_path_abs (uri::parts& result) noexcept
       : result_{result} {}
   void operator() (std::string_view const str) {
-    result_.path.emplace_back (str);
+    (void)str;
+    result_.path.absolute = true;
+    result_.path.directory = true;
   }
 
 private:
@@ -384,8 +386,12 @@ public:
   explicit constexpr append_segment (uri::parts& result) noexcept
       : result_{result} {}
   void operator() (std::string_view const seg) {
-    assert (!result_.path.empty ());
-    result_.path.back () += seg;
+    if (seg.length () == 0) {
+      result_.path.directory = true;
+    } else {
+      result_.path.directory = false;
+      result_.path.segments.emplace_back (seg);
+    }
   }
 
 private:
@@ -397,7 +403,7 @@ auto path_abempty (uri::parts& result) {
   return [&result] (rule const& r) {
     return r
       .star ([&result] (rule const& r2) {
-        return r2.concat (solidus, record_str{result})
+        return r2.concat (solidus, record_path_abs{result})
           .concat (segment, append_segment{result})
           .matched ("\"/\" segment", r2);
       })
@@ -408,13 +414,13 @@ auto path_abempty (uri::parts& result) {
 auto path_absolute (uri::parts& result) {
   // path-absolute = "/" [ segment-nz *( "/" segment ) ]
   return [&result] (rule const& r) {
-    return r.concat (solidus, record_str{result})
+    return r.concat (solidus, record_path_abs{result})
       .optional ([&result] (rule const& r1) {
         return r1.concat (segment_nz, append_segment{result})
           .concat ([&result] (rule const& r2) {
             return r2
               .star ([&result] (rule const& r3) {
-                return r3.concat (solidus, record_str{result})
+                return r3.concat (solidus)
                   .concat (segment, append_segment{result})
                   .matched ("\"/\" segment", r3);
               })
@@ -429,9 +435,9 @@ auto path_absolute (uri::parts& result) {
 // path-noscheme = segment-nz-nc *( "/" segment )
 auto path_noscheme (uri::parts& result) {
   return [&result] (rule const& r) {
-    return r.concat (segment_nz_nc, record_str{result})
+    return r.concat (segment_nz_nc, append_segment{result})
       .star ([&result] (rule const& r1) {
-        return r1.concat (solidus, record_str{result})
+        return r1.concat (solidus)
           .concat (segment, append_segment{result})
           .matched ("\"/\" segment", r1);
       })
@@ -447,9 +453,9 @@ auto path_empty (rule const& r) {
 // path-rootless = segment-nz *( "/" segment )
 auto path_rootless (uri::parts& result) {
   return [&result] (rule const& r) {
-    return r.concat (segment_nz, record_str{result})
+    return r.concat (segment_nz, append_segment{result})
       .star ([&result] (rule const& r1) {
-        return r1.concat (solidus, record_str{result})
+        return r1.concat (solidus)
           .concat (segment, append_segment{result})
           .matched ("\"/\" segment", r1);
       })
@@ -577,6 +583,7 @@ auto URI_reference (uri::parts& result) {
   };
 }
 
+#if 0
 // absolute-URI  = scheme ":" hier-part [ "?" query ]
 auto absolute_URI (uri::parts& result) {
   return [&result] (rule const& r) {
@@ -590,6 +597,7 @@ auto absolute_URI (uri::parts& result) {
       .matched ("absolute-URI", r);
   };
 }
+#endif
 
 void lowercase (std::string& s) {
   std::transform (std::begin (s), std::end (s), std::begin (s), [] (char c) {
@@ -597,70 +605,23 @@ void lowercase (std::string& s) {
   });
 }
 
-std::string percent_decode (std::string_view src) {
-  std::string result;
-  result.reserve (src.length ());
-  for (auto pos = src.begin (), end = src.end (); pos != end; ++pos) {
-    if (*pos == '%' && std::distance (pos, end) >= 3 &&
-        std::isxdigit (*(pos + 1)) && std::isxdigit (*(pos + 2))) {
-      auto hex2dec = [] (char c) {
-        return static_cast<unsigned> (c) -
-               static_cast<unsigned> (std::toupper (c) >= 'A' ? 'A' + 10 : '0');
-      };
-      result +=
-        static_cast<char> ((hex2dec (*(pos + 1)) << 4) | hex2dec (*(pos + 2)));
-      pos += 2;
-    } else {
-      result += *pos;
-    }
-  }
-  return result;
-}
-
-bool has_trailing_slash (std::vector<std::string> const& segments) {
-  bool trailing_slash = false;
-  if (segments.size () > 1) {
-    auto const& b = segments.back ();
-    trailing_slash = b == "/" || b == "/." || b == "/..";
-  }
-  return trailing_slash;
-}
-
 }  // end anonymous namespace
 
 namespace uri {
-
-// URI-reference = URI / relative-ref
-std::optional<parts> split (std::string_view const in) {
-  parts result;
-  return rule{in}.alternative (URI (result), URI_reference (result)).done ()
-           ? std::optional<parts>{result}
-           : std::optional<parts>{std::nullopt};
-}
 
 // Remove dot segments from the string.
 //
 // See also Section 5.2.4 of RFC 3986.
 // http://tools.ietf.org/html/rfc3986#section-5.2.4
-std::vector<std::string> remove_dot_segments (
-  std::vector<std::string> const& path) {
-  std::vector<std::string> output;
-  output.reserve (path.size ());
-  if (path.empty ()) {
-    return output;
-  }
-
-  bool const leading_slash =
-    !path.front ().empty () && path.front ().front () == '/';
-  bool const trailing_slash = has_trailing_slash (path);
-
-  std::for_each (std::begin (path), std::end (path),
+void path_description::remove_dot_segments () {
+  path_container output;
+  std::for_each (std::begin (segments), std::end (segments),
                  [&output] (std::string const& s) {
-                   if (s == "/." || s == ".") {
+                   if (s == ".") {
                      // '.' means "the current directory": ignore it.
                      return;
                    }
-                   if (s == "/.." || s == "..") {
+                   if (s == "..") {
                      // ".." is "up one directory" so, if we can, pop the last
                      // element.
                      if (!output.empty ()) {
@@ -671,43 +632,34 @@ std::vector<std::string> remove_dot_segments (
                    // Anything else just gets appended to the output.
                    output.push_back (s);
                  });
-
-  if (output.empty ()) {
-    if (leading_slash) {
-      output.push_back ("/");
-    }
-  } else {
-    auto& f = output.front ();
-    // If the original path started with a slash, ensure the the output does as
-    // well.
-    if (leading_slash) {
-      if (f.empty () || f.front () != '/') {
-        f.insert (0, "/");
-      }
-    } else {
-      // If the original path didn't start with a slash, match that on the
-      // output.
-      if (!f.empty () && f.front () == '/') {
-        f.erase (0, 1);
-      }
-    }
-  }
-
-  if (trailing_slash && (output.empty () || output.back () != "/")) {
-    output.push_back ("/");
-  }
-  return output;
+  segments = std::move (output);
 }
 
-std::optional<unsigned> hex_to_digit (char const digit) noexcept {
-  if (digit >= 'a' && digit <= 'f') {
-    return static_cast<unsigned> (digit) - ('a' - 10);
+path_description::operator std::filesystem::path () const {
+  std::filesystem::path p;
+  if (absolute) {
+    p /= "/";
   }
-  if (digit >= 'A' && digit <= 'F') {
-    return static_cast<unsigned> (digit) - ('A' - 10);
+  for (auto const& seg : segments) {
+    p /= seg;
   }
-  if (digit >= '0' && digit <= '9') {
-    return static_cast<unsigned> (digit) - '0';
+  if (directory) {
+    p /= "";
+  }
+  return p;
+}
+
+// URI-reference = URI / relative-ref
+std::optional<parts> split (std::string_view const in) {
+  parts result;
+  if (rule{in}.alternative (URI (result), URI_reference (result)).done ()) {
+    if (!result.path.segments.empty ()) {
+      auto const& b = result.path.segments.back ();
+      if (b == "." || b == "..") {
+        result.path.directory = true;
+      }
+    }
+    return result;
   }
   return {};
 }
@@ -748,8 +700,8 @@ void normalize (parts& p) {
     lowercase (*p.host);
     p.host = percent_decode (*p.host);
   }
-  p.path = remove_dot_segments (p.path);
-  for (auto& segment : p.path) {
+  p.path.remove_dot_segments ();
+  for (auto& segment : p.path.segments) {
     segment = percent_decode (segment);
   }
   if (p.query) {
