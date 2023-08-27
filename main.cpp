@@ -22,9 +22,9 @@ bool read_stream (std::istream& is) {
       return s ? "\""s + s.value () + "\""s : "None"s;
     };
     std::cout << " scheme: " << value_or_none (r->scheme) << '\n'
-              << " userinfo: " << value_or_none (r->userinfo) << '\n'
-              << " host: " << value_or_none (r->host) << '\n'
-              << " port: " << value_or_none (r->port) << '\n'
+              << " userinfo: " << value_or_none (r->authority.userinfo) << '\n'
+              << " host: " << value_or_none (r->authority.host) << '\n'
+              << " port: " << value_or_none (r->authority.port) << '\n'
               << " path: "
               << std::quoted (static_cast<std::filesystem::path> (r->path)
                                 .generic_string ())

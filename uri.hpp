@@ -15,30 +15,69 @@ struct path_description {
   bool directory = false;
   path_container segments;
 
+  constexpr bool operator== (path_description const& rhs) const {
+    return absolute == rhs.absolute && directory == rhs.directory &&
+           segments == rhs.segments;
+  }
+  constexpr bool operator!= (path_description const& rhs) const {
+    return !operator== (rhs);
+  }
+
   // Remove dot segments from the string.
   //
   // See also Section 5.2.4 of RFC 3986.
   // http://tools.ietf.org/html/rfc3986#section-5.2.4
   void remove_dot_segments ();
+  constexpr bool empty () const noexcept {
+    return !absolute && !directory && segments.empty ();
+  }
   explicit operator std::filesystem::path () const;
 };
 
-struct parts {
-  std::optional<std::string> scheme;
+struct authority {
   std::optional<std::string> userinfo;
   std::optional<std::string> host;
   std::optional<std::string> port;
+
+  constexpr operator bool () const { return userinfo || host || port; }
+  constexpr bool operator== (authority const& rhs) const {
+    return userinfo == rhs.userinfo && host == rhs.host && port == rhs.port;
+  }
+  constexpr bool operator!= (authority const& rhs) const {
+    return !operator== (rhs);
+  }
+};
+
+std::ostream& operator<< (std::ostream& os, authority const& auth);
+
+struct parts {
+  std::optional<std::string> scheme;
+  struct authority authority;
   path_description path;
   std::optional<std::string> query;
   std::optional<std::string> fragment;
+
+  constexpr bool operator== (parts const& rhs) const {
+    return scheme == rhs.scheme && authority == rhs.authority &&
+           path == rhs.path && query == rhs.query && fragment == rhs.fragment;
+  }
+  constexpr bool operator!= (parts const& rhs) const {
+    return !operator== (rhs);
+  }
 };
 
 std::optional<parts> split (std::string_view in);
+parts join (parts const& Base, parts const& R);
+std::optional<parts> join (std::string_view Base, std::string_view R);
 
 std::string percent_decode (std::string_view src);
 
 void normalize (parts& p);
 void normalize (std::optional<parts>& p);
+
+std::string compose (parts const& p);
+std::ostream& compose (std::ostream& os, parts const& p);
+std::ostream& operator<< (std::ostream& os, parts const& p);
 
 }  // end namespace uri
 

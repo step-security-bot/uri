@@ -1,5 +1,7 @@
 #include "uri.hpp"
 
+#include <sstream>
+
 #include "rule.hpp"
 
 namespace {
@@ -301,7 +303,7 @@ auto host_rule (uri::parts& result) {
           return r1.alternative (ip_literal, ipv4address, reg_name)
             .matched ("IP-literal / IPv4address / reg-name", r1);
         },
-        [&result] (std::string_view host) { result.host = host; })
+        [&result] (std::string_view host) { result.authority.host = host; })
       .matched ("host", r);
   };
 }
@@ -312,7 +314,7 @@ auto userinfo_at (uri::parts& result) {
     return r
       .concat (userinfo,
                [&result] (std::string_view const userinfo) {
-                 result.userinfo = userinfo;
+                 result.authority.userinfo = userinfo;
                })
       .concat (commercial_at)
       .matched ("userinfo \"@\"", r);
@@ -328,7 +330,8 @@ auto colon_port (uri::parts& result) {
   // colon-port = ":" port
   return [&result] (rule const& r) {
     return r.concat (colon)
-      .concat (port, [&result] (std::string_view const p) { result.port = p; })
+      .concat (port, [&result] (
+                       std::string_view const p) { result.authority.port = p; })
       .matched ("\":\" port", r);
   };
 }
@@ -605,6 +608,45 @@ void lowercase (std::string& s) {
   });
 }
 
+// 5.2.3.  Merge Paths
+//
+// The pseudocode above refers to a "merge" routine for merging a
+// relative-path reference with the path of the base URI.  This is
+// accomplished as follows:
+//
+// o  If the base URI has a defined authority component and an empty
+//    path, then return a string consisting of "/" concatenated with the
+//    reference's path; otherwise,
+//
+// o  return a string consisting of the reference's path component
+//    appended to all but the last segment of the base URI's path (i.e.,
+//    excluding any characters after the right-most "/" in the base URI
+//    path, or excluding the entire base URI path if it does not contain
+//    any "/" characters).
+
+uri::path_description merge (uri::parts const& Base, uri::parts const& R) {
+  uri::path_description result;
+  if (Base.authority && Base.path.empty ()) {
+    result.absolute = true;
+    result.directory = R.path.directory;
+    result.segments = R.path.segments;
+    return result;
+  }
+
+  auto last = std::end (Base.path.segments);
+  if (Base.path.segments.size () > 1 && !Base.path.directory) {
+    std::advance (last, -1);
+  }
+
+  result.absolute = Base.path.absolute;
+  result.directory = R.path.directory;
+
+  auto out = std::back_inserter (result.segments);
+  out = std::copy (std::begin (Base.path.segments), last, out);
+  std::copy (std::begin (R.path.segments), std::end (R.path.segments), out);
+  return result;
+}
+
 }  // end anonymous namespace
 
 namespace uri {
@@ -693,12 +735,12 @@ void normalize (parts& p) {
   if (p.scheme) {
     lowercase (*p.scheme);
   }
-  if (p.userinfo) {
-    p.userinfo = percent_decode (*p.userinfo);
+  if (p.authority.userinfo) {
+    p.authority.userinfo = percent_decode (*p.authority.userinfo);
   }
-  if (p.host) {
-    lowercase (*p.host);
-    p.host = percent_decode (*p.host);
+  if (p.authority.host) {
+    lowercase (*p.authority.host);
+    p.authority.host = percent_decode (*p.authority.host);
   }
   p.path.remove_dot_segments ();
   for (auto& segment : p.path.segments) {
@@ -716,6 +758,145 @@ void normalize (std::optional<parts>& p) {
   if (p) {
     normalize (*p);
   }
+}
+
+std::ostream& operator<< (std::ostream& os, authority const& auth) {
+  if (auth.userinfo) {
+    os << *auth.userinfo << "@";
+  }
+  if (auth.host) {
+    os << *auth.host;
+  }
+  if (auth.port) {
+    os << ':' << *auth.port;
+  }
+  return os;
+}
+
+// 5.2.2.  Transform References
+//
+// -- The URI reference is parsed into the five URI components
+// --
+// (R.scheme, R.authority, R.path, R.query, R.fragment) = parse(R);
+//
+// -- A non-strict parser may ignore a scheme in the reference
+// -- if it is identical to the base URI's scheme.
+// --
+// if ((not strict) and (R.scheme == Base.scheme)) then
+//    undefine(R.scheme);
+// endif;
+//
+// if defined(R.scheme) then
+//    T.scheme    = R.scheme;
+//    T.authority = R.authority;
+//    T.path      = remove_dot_segments(R.path);
+//    T.query     = R.query;
+// else
+//    if defined(R.authority) then
+//       T.authority = R.authority;
+//       T.path      = remove_dot_segments(R.path);
+//       T.query     = R.query;
+//    else
+//       if (R.path == "") then
+//          T.path = Base.path;
+//          if defined(R.query) then
+//             T.query = R.query;
+//          else
+//             T.query = Base.query;
+//          endif;
+//       else
+//          if (R.path starts-with "/") then
+//             T.path = remove_dot_segments(R.path);
+//          else
+//             T.path = merge(Base.path, R.path);
+//             T.path = remove_dot_segments(T.path);
+//          endif;
+//          T.query = R.query;
+//       endif;
+//       T.authority = Base.authority;
+//    endif;
+//    T.scheme = Base.scheme;
+// endif;
+//
+// T.fragment = R.fragment;
+parts join (parts const& Base, parts const& R) {
+  parts T;
+  if (R.scheme) {
+    T.scheme = R.scheme;
+    T.authority = R.authority;
+    T.path = R.path;
+    T.path.remove_dot_segments ();
+    T.query = R.query;
+  } else {
+    if (R.authority) {
+      T.authority = R.authority;
+      T.path = R.path;
+      T.path.remove_dot_segments ();
+      T.query = R.query;
+    } else {
+      if (R.path.empty ()) {
+        T.path = Base.path;
+        if (R.query) {
+          T.query = R.query;
+        } else {
+          T.query = Base.query;
+        }
+      } else {
+        if (R.path.absolute) {
+          T.path.absolute = true;
+          T.path = R.path;
+          T.path.remove_dot_segments ();
+        } else {
+          T.path = merge (Base, R);
+          T.path.remove_dot_segments ();
+        }
+        T.query = R.query;
+      }
+      T.authority = Base.authority;
+    }
+    T.scheme = Base.scheme;
+  }
+  T.fragment = R.fragment;
+  return T;
+}
+
+std::optional<parts> join (std::string_view Base, std::string_view R) {
+  auto base_parts = split (Base);
+  if (!base_parts) {
+    return {};
+  }
+  auto reference_parts = split (R);
+  if (!reference_parts) {
+    return {};
+  }
+  return join (*base_parts, *reference_parts);
+}
+
+std::ostream& compose (std::ostream& os, parts const& p) {
+  if (p.scheme) {
+    os << *p.scheme << ':';
+  }
+  if (p.authority) {
+    os << "//" << p.authority;
+  }
+  os << static_cast<std::filesystem::path> (p.path).generic_string ();
+  if (p.query) {
+    os << '?' << *p.query;
+  }
+  if (p.fragment) {
+    os << '#' << *p.fragment;
+  }
+  return os;
+}
+
+std::string compose (parts const& p) {
+  std::stringstream result;
+  result << p;
+  return result.str ();
+}
+
+std::ostream& operator<< (std::ostream& os, parts const& p) {
+  return compose (os, p);
 }
 
 }  // end namespace uri
