@@ -28,7 +28,7 @@ struct path_description {
   // See also Section 5.2.4 of RFC 3986.
   // http://tools.ietf.org/html/rfc3986#section-5.2.4
   void remove_dot_segments ();
-  constexpr bool empty () const noexcept {
+  [[nodiscard]] constexpr bool empty () const noexcept {
     return !absolute && !directory && segments.empty ();
   }
   explicit operator std::filesystem::path () const;
@@ -39,7 +39,7 @@ struct authority {
   std::optional<std::string> host;
   std::optional<std::string> port;
 
-  constexpr operator bool () const { return userinfo || host || port; }
+  constexpr explicit operator bool () const { return userinfo || host || port; }
   constexpr bool operator== (authority const& rhs) const {
     return userinfo == rhs.userinfo && host == rhs.host && port == rhs.port;
   }
