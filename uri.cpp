@@ -707,11 +707,14 @@ std::optional<parts> split (std::string_view const in) {
 }
 
 std::string percent_decode (std::string_view src) {
+  auto is_hex = [] (char const c) {
+    return static_cast<bool> (std::isxdigit (static_cast<int> (c)));
+  };
   std::string result;
   result.reserve (src.length ());
   for (auto pos = src.begin (), end = src.end (); pos != end; ++pos) {
-    if (*pos == '%' && std::distance (pos, end) >= 3 &&
-        std::isxdigit (*(pos + 1)) && std::isxdigit (*(pos + 2))) {
+    if (*pos == '%' && std::distance (pos, end) >= 3 && is_hex (*(pos + 1)) &&
+        is_hex (*(pos + 2))) {
       auto hex2dec = [] (char const digit) {
         if (digit >= 'a' && digit <= 'f') {
           return static_cast<unsigned> (digit) - ('a' - 10);
