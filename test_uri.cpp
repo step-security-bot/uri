@@ -1495,13 +1495,14 @@ TEST (RemoveDotSegments, LonelyDotDotSlashDot) {
   EXPECT_THAT (x->path.segments, ElementsAre ());
 }
 
+// NOLINTNEXTLINE
 TEST (UriFileSystemPath, Root) {
   uri::path_description p;
   p.absolute = true;
   EXPECT_EQ (static_cast<std::filesystem::path> (p),
              std::filesystem::path ("/"));
 }
-
+// NOLINTNEXTLINE
 TEST (UriFileSystemPath, RootFoo) {
   uri::path_description p;
   p.absolute = true;
@@ -1509,7 +1510,7 @@ TEST (UriFileSystemPath, RootFoo) {
   EXPECT_EQ (static_cast<std::filesystem::path> (p),
              std::filesystem::path ("/foo"));
 }
-
+// NOLINTNEXTLINE
 TEST (UriFileSystemPath, AbsoluteTwoSegments) {
   uri::path_description p;
   p.absolute = true;
@@ -1518,7 +1519,7 @@ TEST (UriFileSystemPath, AbsoluteTwoSegments) {
   EXPECT_EQ (static_cast<std::filesystem::path> (p),
              std::filesystem::path ("/foo/bar"));
 }
-
+// NOLINTNEXTLINE
 TEST (UriFileSystemPath, AbsoluteTwoSegmentsDirectory) {
   uri::path_description p;
   p.absolute = true;
@@ -1528,7 +1529,7 @@ TEST (UriFileSystemPath, AbsoluteTwoSegmentsDirectory) {
   EXPECT_EQ (static_cast<std::filesystem::path> (p),
              std::filesystem::path ("/foo/bar/"));
 }
-
+// NOLINTNEXTLINE
 TEST (UriFileSystemPath, RelativeTwoSegments) {
   uri::path_description p;
   p.segments.emplace_back ("foo");
@@ -1536,6 +1537,7 @@ TEST (UriFileSystemPath, RelativeTwoSegments) {
   EXPECT_EQ (static_cast<std::filesystem::path> (p),
              std::filesystem::path ("foo/bar"));
 }
+// NOLINTNEXTLINE
 TEST (UriFileSystemPath, RelativeTwoSegmentsDirectory) {
   uri::path_description p;
   p.directory = true;
@@ -1595,6 +1597,7 @@ protected:
 };
 
 // uri::join() test cases from RFC 3986 5.4.1. Normal Examples.
+// NOLINTNEXTLINE
 TEST_F (Join, Normal) {
   EXPECT_EQ (uri::split ("g:h"), uri::join (base_, "g:h"));
   EXPECT_EQ (uri::split ("http://a/b/c/g"), uri::join (base_, "g"));
@@ -1621,6 +1624,7 @@ TEST_F (Join, Normal) {
   EXPECT_EQ (uri::split ("http://a/"), uri::join (base_, "../../"));
   EXPECT_EQ (uri::split ("http://a/g"), uri::join (base_, "../../g"));
 }
+// NOLINTNEXTLINE
 TEST_F (Join, Abnormal) {
   // Check that we are careful in handling cases where there are more ".."
   // segments in a relative-path reference than there are hierarchical levels in
