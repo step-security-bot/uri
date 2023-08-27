@@ -1505,7 +1505,7 @@ TEST (UriFileSystemPath, Root) {
 TEST (UriFileSystemPath, RootFoo) {
   uri::path_description p;
   p.absolute = true;
-  p.segments.push_back ("foo");
+  p.segments.emplace_back ("foo");
   EXPECT_EQ (static_cast<std::filesystem::path> (p),
              std::filesystem::path ("/foo"));
 }
@@ -1513,8 +1513,8 @@ TEST (UriFileSystemPath, RootFoo) {
 TEST (UriFileSystemPath, AbsoluteTwoSegments) {
   uri::path_description p;
   p.absolute = true;
-  p.segments.push_back ("foo");
-  p.segments.push_back ("bar");
+  p.segments.emplace_back ("foo");
+  p.segments.emplace_back ("bar");
   EXPECT_EQ (static_cast<std::filesystem::path> (p),
              std::filesystem::path ("/foo/bar"));
 }
@@ -1523,24 +1523,24 @@ TEST (UriFileSystemPath, AbsoluteTwoSegmentsDirectory) {
   uri::path_description p;
   p.absolute = true;
   p.directory = true;
-  p.segments.push_back ("foo");
-  p.segments.push_back ("bar");
+  p.segments.emplace_back ("foo");
+  p.segments.emplace_back ("bar");
   EXPECT_EQ (static_cast<std::filesystem::path> (p),
              std::filesystem::path ("/foo/bar/"));
 }
 
 TEST (UriFileSystemPath, RelativeTwoSegments) {
   uri::path_description p;
-  p.segments.push_back ("foo");
-  p.segments.push_back ("bar");
+  p.segments.emplace_back ("foo");
+  p.segments.emplace_back ("bar");
   EXPECT_EQ (static_cast<std::filesystem::path> (p),
              std::filesystem::path ("foo/bar"));
 }
 TEST (UriFileSystemPath, RelativeTwoSegmentsDirectory) {
   uri::path_description p;
   p.directory = true;
-  p.segments.push_back ("foo");
-  p.segments.push_back ("bar");
+  p.segments.emplace_back ("foo");
+  p.segments.emplace_back ("bar");
   EXPECT_EQ (static_cast<std::filesystem::path> (p),
              std::filesystem::path ("foo/bar/"));
 }
