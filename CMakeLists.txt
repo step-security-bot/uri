@@ -159,7 +159,9 @@ endfunction (setup_gtest)
 set (URI_ROOT "${CMAKE_CURRENT_SOURCE_DIR}")
 add_subdirectory (lib)
 setup_gtest ()
-add_subdirectory (unittests)
+if (TARGET gtest)
+  add_subdirectory (unittests)
+endif ()
 
 #           _           _ _ _     _            _
 #  _  _ _ _(_)  ____ __| (_) |_  | |_ ___  ___| |
