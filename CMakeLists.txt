@@ -19,67 +19,6 @@ set (STANDARD 17)
 
 include (CheckCXXCompilerFlag)
 
-function (setup_gtest)
-  if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/googletest/CMakeLists.txt")
-    # Tell gtest to link against the "Multi-threaded Debug DLL runtime library"
-    # on Windows.
-    set (
-      gtest_force_shared_crt
-      On
-      CACHE BOOL "Always use msvcrt.dll"
-    )
-    # We don't want to install either gtest or gmock.
-    set (
-      INSTALL_GTEST
-      Off
-      CACHE BOOL "Disable gtest install"
-    )
-    set (
-      INSTALL_GMOCK
-      Off
-      CACHE BOOL "Disable gmock install"
-    )
-    add_subdirectory (googletest)
-    foreach (target gtest gmock gmock_main gtest_main)
-      set_target_properties (
-        ${target}
-        PROPERTIES CXX_STANDARD ${STANDARD}
-                   CXX_STANDARD_REQUIRED Yes
-                   CXX_EXTENSIONS No
-      )
-
-      if (CMAKE_CXX_COMPILER_ID MATCHES "Clang$")
-        check_cxx_compiler_flag (
-          -Wno-implicit-int-float-conversion
-          CLANG_W_NO_IMPLICIT_INT_FLOAT_CONVERSION
-        )
-        if (${CLANG_W_NO_IMPLICIT_INT_FLOAT_CONVERSION})
-          list (APPEND gclang_options -Wno-implicit-int-float-conversion)
-        endif ()
-      endif ()
-
-      if (LIBCXX)
-        list (APPEND gclang_options -stdlib=libc++)
-      endif ()
-
-      target_compile_definitions (
-        ${target} PUBLIC GTEST_REMOVE_LEGACY_TEST_CASEAPI_=1
-      )
-      target_compile_options (
-        ${target}
-        PRIVATE
-          $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:${gclang_options}>
-      )
-      target_link_options (
-        ${target}
-        PRIVATE
-        $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:${gclang_options}>
-      )
-    endforeach ()
-  endif ()
-
-endfunction (setup_gtest)
-
 function (setup_target target)
 
   set (
@@ -164,28 +103,63 @@ function (setup_target target)
 
 endfunction (setup_target)
 
+function (setup_gtest)
+
+  if (EXISTS "${URI_ROOT}/googletest/CMakeLists.txt")
+    # Tell gtest to link against the "Multi-threaded Debug DLL runtime library"
+    # on Windows.
+    set (gtest_force_shared_crt On CACHE BOOL "Always use msvcrt.dll")
+    # We don't want to install either gtest or gmock.
+    set (INSTALL_GTEST Off CACHE BOOL "Disable gtest install")
+    set (INSTALL_GMOCK Off CACHE BOOL "Disable gmock install")
+    add_subdirectory ("${URI_ROOT}/googletest")
+
+    # Adjust compiler options for the gtest/gmock.
+    foreach (target gtest gmock gmock_main gtest_main)
+      set_target_properties (
+        ${target}
+        PROPERTIES CXX_STANDARD ${STANDARD}
+                   CXX_STANDARD_REQUIRED Yes
+                   CXX_EXTENSIONS No
+      )
+
+      if (CMAKE_CXX_COMPILER_ID MATCHES "Clang$")
+        check_cxx_compiler_flag (
+          -Wno-implicit-int-float-conversion
+          CLANG_W_NO_IMPLICIT_INT_FLOAT_CONVERSION
+        )
+        if (${CLANG_W_NO_IMPLICIT_INT_FLOAT_CONVERSION})
+          list (APPEND gclang_options -Wno-implicit-int-float-conversion)
+        endif ()
+      endif ()
+
+      if (LIBCXX)
+        list (APPEND gclang_options -stdlib=libc++)
+      endif ()
+
+      target_compile_definitions (
+        ${target} PUBLIC GTEST_REMOVE_LEGACY_TEST_CASEAPI_=1
+      )
+      target_compile_options (
+        ${target}
+        PRIVATE
+          $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:${gclang_options}>
+      )
+      target_link_options (
+        ${target}
+        PRIVATE
+        $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:${gclang_options}>
+      )
+    endforeach ()
+  endif ()
+
+endfunction (setup_gtest)
+
+
 set (URI_ROOT "${CMAKE_CURRENT_SOURCE_DIR}")
 add_subdirectory (lib)
-
-#            _ _     _          _
-#  _  _ _ _ (_) |_  | |_ ___ __| |_
-# | || | ' \| |  _| |  _/ -_|_-<  _|
-#  \_,_|_||_|_|\__|  \__\___/__/\__|
-#
 setup_gtest ()
-add_executable (unittest test_uri.cpp test_rule.cpp)
-target_link_libraries (unittest urilib gmock_main)
-setup_target (unittest)
-set (clang_options -Wno-global-constructors -Wno-used-but-marked-unused)
-set (gcc_options)
-set (msvc_options -wd4702) # unreachable code.
-target_compile_options (
-  unittest
-  PRIVATE
-    $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:${clang_options}>
-    $<$<CXX_COMPILER_ID:GNU>:${gcc_options}>
-    $<$<CXX_COMPILER_ID:MSVC>:${msvc_options}>
-)
+add_subdirectory (unittests)
 
 #           _           _ _ _     _            _
 #  _  _ _ _(_)  ____ __| (_) |_  | |_ ___  ___| |
