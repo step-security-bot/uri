@@ -7,9 +7,11 @@ bool rule::done () const {
   if (!tail_ || !tail_->empty ()) {
     return false;
   }
+  // Run all of the acceptor functions that were gathered on the grammar path
+  // that we matched.
   std::for_each (std::begin (acceptors_), std::end (acceptors_),
                  [] (acceptor_container::value_type const& a) {
-                   std::get<0> (a) (std::get<1> (a));
+                   std::invoke (std::get<0> (a), std::get<1> (a));
                  });
   return true;
 }
