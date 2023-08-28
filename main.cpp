@@ -4,7 +4,6 @@
 
 #include "uri.hpp"
 
-using namespace std::literals::string_view_literals;
 using namespace std::literals::string_literals;
 
 namespace {
@@ -64,13 +63,3 @@ int main (int argc, char const* argv[]) {
   }
   return exit_code;
 }
-
-#if 0
-  std::vector<std::string> out = remove_dot_segments (uri);
-  std::string result;
-  for (auto const & s: out) {
-    result += '/';
-    result += s;
-  }
-  std::cout << std::quoted(result) << '\n';
-#endif
