@@ -162,27 +162,4 @@ setup_gtest ()
 if (TARGET gtest)
   add_subdirectory (unittests)
 endif ()
-
-#           _           _ _ _     _            _
-#  _  _ _ _(_)  ____ __| (_) |_  | |_ ___  ___| |
-# | || | '_| | (_-< '_ \ | |  _| |  _/ _ \/ _ \ |
-#  \_,_|_| |_| /__/ .__/_|_|\__|  \__\___/\___/_|
-#                 |_|
-add_executable (uri main.cpp)
-setup_target (uri)
-target_link_libraries (uri PUBLIC urilib)
-
-if (TARGET gtest)
-  set (prelink_target uri)
-  set (test_target unittest)
-  set (out_xml "${CMAKE_BINARY_DIR}/${test_target}.xml")
-  add_custom_command (
-    TARGET ${prelink_target}
-    PRE_LINK
-    COMMAND "$<TARGET_FILE:${test_target}>" "--gtest_output=xml:${out_xml}"
-    WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
-    COMMENT "Running unit tests" DEPENDS ${test_target}
-    BYPRODUCTS ${out_xml}
-    VERBATIM
-  )
-endif ()
+add_subdirectory (tools)
