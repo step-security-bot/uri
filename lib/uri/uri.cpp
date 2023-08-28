@@ -730,7 +730,9 @@ std::string percent_decode (std::string_view src) {
 
   std::string result;
   result.reserve (src.length ());
+  // NOLINTNEXTLINE(llvm-qualified-auto,readability-qualified-auto)
   auto pos = src.begin ();
+  // NOLINTNEXTLINE(llvm-qualified-auto,readability-qualified-auto)
   auto const end = src.end ();
   while (pos != end) {
     if (*pos == '%' && std::distance (pos, end) >= 3 && is_hex (*(pos + 1)) &&
@@ -808,7 +810,7 @@ parts join (parts const& base, parts const& reference, bool strict) {
   // In "non-strict" mode we ignore a scheme in the reference if it is identical
   // to the base URI's scheme.
   std::optional<std::string> empty;
-  auto* ref_scheme = &reference.scheme;
+  auto const * ref_scheme = &reference.scheme;
   if (!strict && reference.scheme == base.scheme) {
     ref_scheme = &empty;
   }
