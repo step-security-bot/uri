@@ -18,12 +18,12 @@ jobs:
         with:
           submodules: 'True'
 
-      - name: Install libc++, libc++abc, and ninja
+      - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build
+          sudo apt-get install -y cmake lcov ninja-build
 
-      - name: Configure build
+      - name: Configure Build
         run: |
           mkdir "$BUILD_DIR"
           cmake                                      \
@@ -38,11 +38,15 @@ jobs:
         run: |
             cmake --build "$BUILD_DIR"
 
-      #- name: Collect the coverage
-      #  run: |
-      #    "llvm-cov-$CLANG_VERSION" show \
-      #      --instr-profile "$BUILD_DIR/merged.profdata" \
-      #      "$BUILD_DIR/unittests/pj-unittests" > coverage.txt
+      - name: Collect the Coverage
+        run: |
+          set -x
+          lcov                              \
+            --capture                       \
+            --output-file coverage.info     \
+            --directory "$BUILD_DIR"        \
+            --gcov-tool "gcov-$GCC_VERSION" \
+            --include "$(pwd)/*.?pp"
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v3
