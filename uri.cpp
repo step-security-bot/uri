@@ -602,60 +602,53 @@ auto absolute_URI (uri::parts& result) {
 }
 #endif
 
-void lowercase (std::string& s) {
-  std::transform (std::begin (s), std::end (s), std::begin (s), [] (char c) {
-    return static_cast<char> (std::tolower (static_cast<int> (c)));
-  });
-}
-
-// 5.2.3.  Merge Paths
-//
-// The pseudocode above refers to a "merge" routine for merging a
-// relative-path reference with the path of the base URI.  This is
-// accomplished as follows:
-//
-// o  If the base URI has a defined authority component and an empty
-//    path, then return a string consisting of "/" concatenated with the
-//    reference's path; otherwise,
-//
-// o  return a string consisting of the reference's path component
-//    appended to all but the last segment of the base URI's path (i.e.,
-//    excluding any characters after the right-most "/" in the base URI
-//    path, or excluding the entire base URI path if it does not contain
-//    any "/" characters).
-
-uri::path_description merge (uri::parts const& Base, uri::parts const& R) {
-  uri::path_description result;
-  if (Base.authority && Base.path.empty ()) {
-    result.absolute = true;
-    result.directory = R.path.directory;
-    result.segments = R.path.segments;
-    return result;
+// merge
+// ~~~~~
+/// An implementation of the algorithm in RFC 3986, section 5.2.3 "Merge Paths"
+/// (http://tools.ietf.org/html/rfc3986#section-5.2.3). It is responsible for
+/// merging a relative-path reference with the path of the base URI.
+///
+/// \param base  The base URL.
+/// \param ref  A relative-path reference.
+/// \result  The merged path.
+uri::path merge (uri::parts const& base, uri::parts const& ref) {
+  // If the base URI has a defined authority component and an empty path, then
+  // return a path consisting of "/" concatenated with the reference's path
+  if (base.authority && base.path.empty ()) {
+    uri::path r1;
+    r1.absolute = true;
+    r1.directory = ref.path.directory;
+    r1.segments = ref.path.segments;
+    return r1;
   }
 
-  auto last = std::end (Base.path.segments);
-  if (Base.path.segments.size () > 1 && !Base.path.directory) {
+  // Return a path consisting of the reference's path component appended to all
+  // but the last segment of the base URI's path.
+  uri::path r2;
+  r2.absolute = base.path.absolute;
+  r2.directory = ref.path.directory;
+
+  auto last = std::end (base.path.segments);
+  if (base.path.segments.size () > 1 && !base.path.directory) {
     std::advance (last, -1);
   }
-
-  result.absolute = Base.path.absolute;
-  result.directory = R.path.directory;
-
-  auto out = std::back_inserter (result.segments);
-  out = std::copy (std::begin (Base.path.segments), last, out);
-  std::copy (std::begin (R.path.segments), std::end (R.path.segments), out);
-  return result;
+  auto out = std::back_inserter (r2.segments);
+  out = std::copy (std::begin (base.path.segments), last, out);
+  std::copy (std::begin (ref.path.segments), std::end (ref.path.segments), out);
+  return r2;
 }
 
 }  // end anonymous namespace
 
 namespace uri {
 
-// Remove dot segments from the string.
-//
-// See also Section 5.2.4 of RFC 3986.
-// http://tools.ietf.org/html/rfc3986#section-5.2.4
-void path_description::remove_dot_segments () {
+// remove dot segments
+// ~~~~~~~~~~~~~~~~~~~
+// This function removes the special "." and ".." complete path segments from a
+// referenced path. An implementation of the algorithm in RFC 3986,
+// section 5.2.4 "Remove Dot Segments"
+// (http://tools.ietf.org/html/rfc3986#section-5.2.4).
+void path::remove_dot_segments () {
   auto const begin = std::begin (segments);
   auto const end = std::end (segments);
   auto outit = begin;
@@ -678,7 +671,7 @@ void path_description::remove_dot_segments () {
   segments.erase (outit, end);
 }
 
-path_description::operator std::filesystem::path () const {
+path::operator std::filesystem::path () const {
   std::filesystem::path p;
   if (absolute) {
     p /= "/";
@@ -692,9 +685,9 @@ path_description::operator std::filesystem::path () const {
   return p;
 }
 
-// URI-reference = URI / relative-ref
 std::optional<parts> split (std::string_view const in) {
   parts result;
+  // URI-reference = URI / relative-ref
   if (rule{in}.alternative (URI (result), URI_reference (result)).done ()) {
     if (!result.path.segments.empty ()) {
       auto const& b = result.path.segments.back ();
@@ -708,34 +701,44 @@ std::optional<parts> split (std::string_view const in) {
 }
 
 std::string percent_decode (std::string_view src) {
-  auto is_hex = [] (char const c) {
+  auto const is_hex = [] (char const c) {
     return static_cast<bool> (std::isxdigit (static_cast<int> (c)));
   };
+  auto const hex2dec = [] (char const digit) {
+    if (digit >= 'a' && digit <= 'f') {
+      return static_cast<unsigned> (digit) - ('a' - 10);
+    }
+    if (digit >= 'A' && digit <= 'F') {
+      return static_cast<unsigned> (digit) - ('A' - 10);
+    }
+    return static_cast<unsigned> (digit) - '0';
+  };
+
   std::string result;
   result.reserve (src.length ());
-  for (auto pos = src.begin (), end = src.end (); pos != end; ++pos) {
+  auto pos = src.begin ();
+  auto const end = src.end ();
+  while (pos != end) {
     if (*pos == '%' && std::distance (pos, end) >= 3 && is_hex (*(pos + 1)) &&
         is_hex (*(pos + 2))) {
-      auto hex2dec = [] (char const digit) {
-        if (digit >= 'a' && digit <= 'f') {
-          return static_cast<unsigned> (digit) - ('a' - 10);
-        }
-        if (digit >= 'A' && digit <= 'F') {
-          return static_cast<unsigned> (digit) - ('A' - 10);
-        }
-        return static_cast<unsigned> (digit) - '0';
-      };
       result +=
         static_cast<char> ((hex2dec (*(pos + 1)) << 4) | hex2dec (*(pos + 2)));
-      pos += 2;
+      pos += 3;
     } else {
       result += *pos;
+      ++pos;
     }
   }
   return result;
 }
 
 void normalize (parts& p) {
+  auto const lowercase = [] (std::string& s) {
+    std::transform (std::begin (s), std::end (s), std::begin (s), [] (char c) {
+      return static_cast<char> (std::tolower (static_cast<int> (c)));
+    });
+  };
+
   if (p.scheme) {
     lowercase (*p.scheme);
   }
@@ -777,102 +780,68 @@ std::ostream& operator<< (std::ostream& os, authority const& auth) {
   return os;
 }
 
-// 5.2.2.  Transform References
-//
-// -- The URI reference is parsed into the five URI components
-// --
-// (R.scheme, R.authority, R.path, R.query, R.fragment) = parse(R);
-//
-// -- A non-strict parser may ignore a scheme in the reference
-// -- if it is identical to the base URI's scheme.
-// --
-// if ((not strict) and (R.scheme == Base.scheme)) then
-//    undefine(R.scheme);
-// endif;
-//
-// if defined(R.scheme) then
-//    T.scheme    = R.scheme;
-//    T.authority = R.authority;
-//    T.path      = remove_dot_segments(R.path);
-//    T.query     = R.query;
-// else
-//    if defined(R.authority) then
-//       T.authority = R.authority;
-//       T.path      = remove_dot_segments(R.path);
-//       T.query     = R.query;
-//    else
-//       if (R.path == "") then
-//          T.path = Base.path;
-//          if defined(R.query) then
-//             T.query = R.query;
-//          else
-//             T.query = Base.query;
-//          endif;
-//       else
-//          if (R.path starts-with "/") then
-//             T.path = remove_dot_segments(R.path);
-//          else
-//             T.path = merge(Base.path, R.path);
-//             T.path = remove_dot_segments(T.path);
-//          endif;
-//          T.query = R.query;
-//       endif;
-//       T.authority = Base.authority;
-//    endif;
-//    T.scheme = Base.scheme;
-// endif;
-//
-// T.fragment = R.fragment;
+// join
+// ~~~~
+/// Transforms a URI reference relative to a base URI into its target URI. An
+/// implementation of the algorithm in RFC 3986, section 5.2.2 "Transform
+/// References" (http://tools.ietf.org/html/rfc3986#section-5.2.2).
+///
+/// \param base  The base URI.
+/// \param reference The URI reference.
+/// \param strict  Strict mode.
+/// \result  The target URI.
 parts join (parts const& base, parts const& reference, bool strict) {
+  // In "non-strict" mode we ignore a scheme in the reference if it is identical
+  // to the base URI's scheme.
   std::optional<std::string> empty;
   auto* ref_scheme = &reference.scheme;
   if (!strict && reference.scheme == base.scheme) {
     ref_scheme = &empty;
   }
 
-  parts T;
+  parts target;
   if (*ref_scheme) {
-    T.scheme = *ref_scheme;
-    T.authority = reference.authority;
-    T.path = reference.path;
-    T.path.remove_dot_segments ();
-    T.query = reference.query;
+    target.scheme = *ref_scheme;
+    target.authority = reference.authority;
+    target.path = reference.path;
+    target.path.remove_dot_segments ();
+    target.query = reference.query;
   } else {
     if (reference.authority) {
-      T.authority = reference.authority;
-      T.path = reference.path;
-      T.path.remove_dot_segments ();
-      T.query = reference.query;
+      target.authority = reference.authority;
+      target.path = reference.path;
+      target.path.remove_dot_segments ();
+      target.query = reference.query;
     } else {
       if (reference.path.empty ()) {
-        T.path = base.path;
-        T.query = reference.query ? reference.query : base.query;
+        target.path = base.path;
+        target.query = reference.query ? reference.query : base.query;
       } else {
         if (reference.path.absolute) {
-          T.path.absolute = true;
-          T.path = reference.path;
-          T.path.remove_dot_segments ();
+          target.path.absolute = true;
+          target.path = reference.path;
+          target.path.remove_dot_segments ();
         } else {
-          T.path = merge (base, reference);
-          T.path.remove_dot_segments ();
+          target.path = merge (base, reference);
+          target.path.remove_dot_segments ();
         }
-        T.query = reference.query;
+        target.query = reference.query;
       }
-      T.authority = base.authority;
+      target.authority = base.authority;
     }
-    T.scheme = base.scheme;
+    target.scheme = base.scheme;
   }
-  T.fragment = reference.fragment;
-  return T;
+  target.fragment = reference.fragment;
+  return target;
 }
 
-std::optional<parts> join (std::string_view Base, std::string_view R,
+std::optional<parts> join (std::string_view base, std::string_view reference,
                            bool strict) {
-  auto const base_parts = split (Base);
+  auto const base_parts = split (base);
   if (!base_parts) {
     return {};
   }
-  auto const reference_parts = split (R);
+  auto const reference_parts = split (reference);
   if (!reference_parts) {
     return {};
   }

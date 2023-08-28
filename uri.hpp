@@ -8,16 +8,16 @@
 
 namespace uri {
 
-struct path_description {
+struct path {
   bool absolute = false;
   bool directory = false;
   std::vector<std::string> segments;
 
-  constexpr bool operator== (path_description const& rhs) const {
+  constexpr bool operator== (path const& rhs) const {
     return absolute == rhs.absolute && directory == rhs.directory &&
            segments == rhs.segments;
   }
-  constexpr bool operator!= (path_description const& rhs) const {
+  constexpr bool operator!= (path const& rhs) const {
     return !operator== (rhs);
   }
 
@@ -51,7 +51,7 @@ std::ostream& operator<< (std::ostream& os, authority const& auth);
 struct parts {
   std::optional<std::string> scheme;
   struct authority authority;
-  path_description path;
+  struct path path;
   std::optional<std::string> query;
   std::optional<std::string> fragment;
 

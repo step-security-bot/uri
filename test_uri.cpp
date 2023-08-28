@@ -1497,14 +1497,14 @@ TEST (RemoveDotSegments, LonelyDotDotSlashDot) {
 
 // NOLINTNEXTLINE
 TEST (UriFileSystemPath, Root) {
-  uri::path_description p;
+  uri::path p;
   p.absolute = true;
   EXPECT_EQ (static_cast<std::filesystem::path> (p),
              std::filesystem::path ("/"));
 }
 // NOLINTNEXTLINE
 TEST (UriFileSystemPath, RootFoo) {
-  uri::path_description p;
+  uri::path p;
   p.absolute = true;
   p.segments.emplace_back ("foo");
   EXPECT_EQ (static_cast<std::filesystem::path> (p),
@@ -1512,7 +1512,7 @@ TEST (UriFileSystemPath, RootFoo) {
 }
 // NOLINTNEXTLINE
 TEST (UriFileSystemPath, AbsoluteTwoSegments) {
-  uri::path_description p;
+  uri::path p;
   p.absolute = true;
   p.segments.emplace_back ("foo");
   p.segments.emplace_back ("bar");
@@ -1521,7 +1521,7 @@ TEST (UriFileSystemPath, AbsoluteTwoSegments) {
 }
 // NOLINTNEXTLINE
 TEST (UriFileSystemPath, AbsoluteTwoSegmentsDirectory) {
-  uri::path_description p;
+  uri::path p;
   p.absolute = true;
   p.directory = true;
   p.segments.emplace_back ("foo");
@@ -1531,7 +1531,7 @@ TEST (UriFileSystemPath, AbsoluteTwoSegmentsDirectory) {
 }
 // NOLINTNEXTLINE
 TEST (UriFileSystemPath, RelativeTwoSegments) {
-  uri::path_description p;
+  uri::path p;
   p.segments.emplace_back ("foo");
   p.segments.emplace_back ("bar");
   EXPECT_EQ (static_cast<std::filesystem::path> (p),
@@ -1539,7 +1539,7 @@ TEST (UriFileSystemPath, RelativeTwoSegments) {
 }
 // NOLINTNEXTLINE
 TEST (UriFileSystemPath, RelativeTwoSegmentsDirectory) {
-  uri::path_description p;
+  uri::path p;
   p.directory = true;
   p.segments.emplace_back ("foo");
   p.segments.emplace_back ("bar");
