@@ -18,7 +18,7 @@
 #include <string>
 #include <vector>
 
-#include "rule.hpp"
+#include "uri/rule.hpp"
 
 using testing::ElementsAre;
 using namespace std::string_literals;

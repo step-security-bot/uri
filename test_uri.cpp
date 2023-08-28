@@ -16,7 +16,7 @@
 
 #include <gmock/gmock.h>
 
-#include "uri.hpp"
+#include "uri/uri.hpp"
 
 using testing::ElementsAre;
 

@@ -164,13 +164,8 @@ function (setup_target target)
 
 endfunction (setup_target)
 
-#           _   _ _ _
-#  _  _ _ _(_) | (_) |__
-# | || | '_| | | | | '_ \
-#  \_,_|_| |_| |_|_|_.__/
-#
-add_library (urilib STATIC rule.cpp rule.hpp uri.cpp uri.hpp)
-setup_target (urilib)
+set (URI_ROOT "${CMAKE_CURRENT_SOURCE_DIR}")
+add_subdirectory (lib)
 
 #            _ _     _          _
 #  _  _ _ _ (_) |_  | |_ ___ __| |_

@@ -17,7 +17,7 @@
 #include <fstream>
 #include <iostream>
 
-#include "uri.hpp"
+#include "uri/uri.hpp"
 
 using namespace std::literals::string_literals;
 
