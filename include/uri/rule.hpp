@@ -13,6 +13,72 @@
 // SPDX-License-Identifier: MIT
 //
 //===----------------------------------------------------------------------===//
+/// \file rule.hpp
+/// \brief A class to aid in the implementation of ABNF grammars.
+///
+/// The rule class is intended to enable the (reasonably) straightforward
+/// conversion of ABNF grammars to C++ code. Translation is usually
+/// straightforward.
+///
+/// ## Concatenation
+///
+/// A definition such as: `C = A B` would be translated as:
+///
+/// ~~~cpp
+/// auto C (rule const & r) {
+///   return r.concat(A).concat(B).matched("C", r);
+/// }
+/// ~~~
+///
+/// ## Alternative
+///
+/// A definition such as: `C = A / B` would be translated as:
+///
+/// ~~~cpp
+/// auto C (rule const & r) {
+///   return r.alternative(A, B).matched("C", r);
+/// }
+/// ~~~
+///
+/// ## Optional Sequence
+///
+/// An optional sequence such as `B = [A]` can implemented as:
+///
+/// ~~~cpp
+/// auto B (rule const & r) {
+///     return r.optional(A).matched("B", r);
+/// }
+/// ~~~
+///
+/// ## Repetition
+///
+/// To indicate repetition of an element, the form `<a>*<b>Rule` is used. The
+/// optional `<a>` gives the minimum number of elements to be matched (with a
+/// default of 0). Similarly, the optional `<b>` gives the maximum number of
+/// elements to be matched with a default of the largest integer. The `nRule`
+/// form is equivalent to `<n>*<n>Rule`. The can all be implemented using
+/// `star()`:
+///
+/// For example: `h16 = 1*4HEXDIG` can be implemented as:
+///
+/// ~~~cpp
+/// auto h16 (rule const& r) {
+///   return r.star(hexdig, 1, 4).matched("h16", r);
+/// }
+/// ~~~
+///
+/// # Gotchas
+///
+/// There are a couple of gotchas which are important to be aware of:
+///
+/// 1. `star()` is greedy. It will match as many rules as it can (up to the
+/// specified maximum). This greedy matching could cause later rules to fail in
+/// cases where matching fewer items might enable them to succeed.
+/// 2. When using `alternative()`, the order of evaluation is significant. The
+/// function evaluates each of the alternative rules from left to right and
+/// stops as soon as one is matched. Care needs to be taken where there is
+/// potential ambiguity between alternative rules.
+
 #ifndef RULE_HPP
 #define RULE_HPP
 
@@ -28,9 +94,6 @@
 #include <tuple>
 #include <vector>
 
-// The rule class is intended to enable the (reasonably) straightforward
-// conversion of ABNF grammars to C++ code.
-// -
 class rule {
 public:
   using acceptor_container = std::vector<
@@ -46,7 +109,7 @@ public:
   rule& operator= (rule const& rhs) = default;
   rule& operator= (rule&& rhs) noexcept = default;
 
-  bool done () const;
+  [[nodiscard]] bool done () const;
 
   template <typename MatchFunction, typename AcceptFunction,
             typename = std::enable_if_t<
