@@ -1,3 +1,18 @@
+//===- main.cpp -----------------------------------------------------------===//
+//*                  _        *
+//*  _ __ ___   __ _(_)_ __   *
+//* | '_ ` _ \ / _` | | '_ \  *
+//* | | | | | | (_| | | | | | *
+//* |_| |_| |_|\__,_|_|_| |_| *
+//*                           *
+//===----------------------------------------------------------------------===//
+//
+// Distributed under the MIT License.
+// See https://github.com/paulhuggett/uri/blob/main/LICENSE.TXT
+// for license information.
+// SPDX-License-Identifier: MIT
+//
+//===----------------------------------------------------------------------===//
 #include <filesystem>
 #include <fstream>
 #include <iostream>

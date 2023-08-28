@@ -1,4 +1,19 @@
 #!/usr/bin/env python3
+# ===- test.py ------------------------------------------------------------===//
+# *  _            _    *
+# * | |_ ___  ___| |_  *
+# * | __/ _ \/ __| __| *
+# * | ||  __/\__ \ |_  *
+# *  \__\___||___/\__| *
+# *                    *
+# ===----------------------------------------------------------------------===//
+#
+#  Distributed under the MIT License.
+#  See https://github.com/paulhuggett/uri/blob/main/LICENSE.TXT
+#  for license information.
+#  SPDX-License-Identifier: MIT
+#
+# ===----------------------------------------------------------------------===//
 import argparse
 import sys
 import uritools

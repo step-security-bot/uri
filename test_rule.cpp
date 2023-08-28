@@ -1,4 +1,18 @@
-
+//===- test_rule.cpp ------------------------------------------------------===//
+//*             _       *
+//*  _ __ _   _| | ___  *
+//* | '__| | | | |/ _ \ *
+//* | |  | |_| | |  __/ *
+//* |_|   \__,_|_|\___| *
+//*                     *
+//===----------------------------------------------------------------------===//
+//
+// Distributed under the MIT License.
+// See https://github.com/paulhuggett/uri/blob/main/LICENSE.TXT
+// for license information.
+// SPDX-License-Identifier: MIT
+//
+//===----------------------------------------------------------------------===//
 #include <gmock/gmock.h>
 
 #include <string>

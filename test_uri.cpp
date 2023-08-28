@@ -1,13 +1,29 @@
-// The tests here were generated using the 'abnfgen' tool with the official
-// URI ABNF. The tool was asked to produce 100 tests with the "attempt full
-// coverage"
-// (-c) mode enabled.
+//===- test_uri.cpp -------------------------------------------------------===//
+//*             _  *
+//*  _   _ _ __(_) *
+//* | | | | '__| | *
+//* | |_| | |  | | *
+//*  \__,_|_|  |_| *
+//*                *
+//===----------------------------------------------------------------------===//
+//
+// Distributed under the MIT License.
+// See https://github.com/paulhuggett/uri/blob/main/LICENSE.TXT
+// for license information.
+// SPDX-License-Identifier: MIT
+//
+//===----------------------------------------------------------------------===//
 
 #include <gmock/gmock.h>
 
 #include "uri.hpp"
 
 using testing::ElementsAre;
+
+// The tests in this group were generated using the 'abnfgen' tool with the
+// official URI ABNF. The tool was asked to produce 100 tests with the "attempt
+// full coverage" (-c) mode enabled.
+
 // NOLINTNEXTLINE
 TEST (Uri, Empty) {
   std::optional<uri::parts> const x = uri::split ("");

@@ -1,3 +1,18 @@
+//===- uri.cpp ------------------------------------------------------------===//
+//*             _  *
+//*  _   _ _ __(_) *
+//* | | | | '__| | *
+//* | |_| | |  | | *
+//*  \__,_|_|  |_| *
+//*                *
+//===----------------------------------------------------------------------===//
+//
+// Distributed under the MIT License.
+// See https://github.com/paulhuggett/uri/blob/main/LICENSE.TXT
+// for license information.
+// SPDX-License-Identifier: MIT
+//
+//===----------------------------------------------------------------------===//
 #include "uri.hpp"
 
 #include <sstream>
