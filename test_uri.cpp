@@ -398,19 +398,19 @@ TEST (Uri, 0030) {
 }
 // NOLINTNEXTLINE
 TEST (Uri, 0031) {
-  auto const x = uri::split ("k-0+:\?\?\?/");
+  auto const x = uri::split (R"(k-0+:???/)");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "k-0+");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
   EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
-  EXPECT_EQ (x->query, "\?\?/");
+  EXPECT_EQ (x->query, R"(??/)");
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
 TEST (Uri, 0032) {
-  auto const x = uri::split ("y://%DD@253.216.255.251//:./?\?/://;");
+  auto const x = uri::split (R"(y://%DD@253.216.255.251//:./??/://;)");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "y");
   EXPECT_EQ (x->authority.userinfo, "%DD");
@@ -899,7 +899,7 @@ TEST (Uri, 0068) {
 // NOLINTNEXTLINE
 TEST (Uri, 0069) {
   auto const x =
-    uri::split ("v+://@[::C:dEd:4:218.255.251.5]:8/@.;J\?\?Q\?\?%48/#");
+    uri::split (R"(v+://@[::C:dEd:4:218.255.251.5]:8/@.;J??Q??%48/#)");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "v+");
   EXPECT_EQ (x->authority.userinfo, "");
@@ -908,7 +908,7 @@ TEST (Uri, 0069) {
   EXPECT_TRUE (x->path.absolute);
   EXPECT_FALSE (x->path.directory);
   EXPECT_THAT (x->path.segments, ElementsAre ("@.;J"));
-  EXPECT_EQ (x->query, "?Q?\?%48/");
+  EXPECT_EQ (x->query, R"(?Q??%48/)");
   EXPECT_EQ (x->fragment, "");
 }
 // NOLINTNEXTLINE
@@ -1005,7 +1005,7 @@ TEST (Uri, 0076) {
 }
 // NOLINTNEXTLINE
 TEST (Uri, 0077) {
-  auto const x = uri::split ("Y://[4Bbc:bb::cDcd:5:c4:e:B1]:/%CA@/./?\?");
+  auto const x = uri::split (R"(Y://[4Bbc:bb::cDcd:5:c4:e:B1]:/%CA@/./??)");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "Y");
   EXPECT_FALSE (x->authority.userinfo);
