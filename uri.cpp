@@ -656,25 +656,26 @@ namespace uri {
 // See also Section 5.2.4 of RFC 3986.
 // http://tools.ietf.org/html/rfc3986#section-5.2.4
 void path_description::remove_dot_segments () {
-  path_container output;
-  std::for_each (std::begin (segments), std::end (segments),
-                 [&output] (std::string const& s) {
-                   if (s == ".") {
-                     // '.' means "the current directory": ignore it.
-                     return;
-                   }
-                   if (s == "..") {
-                     // ".." is "up one directory" so, if we can, pop the last
-                     // element.
-                     if (!output.empty ()) {
-                       output.pop_back ();
-                     }
-                     return;
-                   }
-                   // Anything else just gets appended to the output.
-                   output.push_back (s);
-                 });
-  segments = std::move (output);
+  auto const begin = std::begin (segments);
+  auto const end = std::end (segments);
+  auto outit = begin;
+  for (auto it = begin; it != end; ++it) {
+    if (*it == ".") {
+      // '.' means "the current directory": remove it.
+    } else if (*it == "..") {
+      // ".." is "up one directory" so, if we can, pop the last
+      // element.
+      if (outit != begin) {
+        --outit;
+      }
+    } else {
+      if (outit != it) {
+        *outit = std::move (*it);
+      }
+      ++outit;
+    }
+  }
+  segments.erase (outit, end);
 }
 
 path_description::operator std::filesystem::path () const {
@@ -822,57 +823,60 @@ std::ostream& operator<< (std::ostream& os, authority const& auth) {
 // endif;
 //
 // T.fragment = R.fragment;
-parts join (parts const& Base, parts const& R) {
-  parts T;
-  if (R.scheme) {
-    T.scheme = R.scheme;
-    T.authority = R.authority;
-    T.path = R.path;
-    T.path.remove_dot_segments ();
-    T.query = R.query;
-  } else {
-    if (R.authority) {
-      T.authority = R.authority;
-      T.path = R.path;
-      T.path.remove_dot_segments ();
-      T.query = R.query;
-    } else {
-      if (R.path.empty ()) {
-        T.path = Base.path;
-        if (R.query) {
-          T.query = R.query;
-        } else {
-          T.query = Base.query;
-        }
-      } else {
-        if (R.path.absolute) {
-          T.path.absolute = true;
-          T.path = R.path;
-          T.path.remove_dot_segments ();
-        } else {
-          T.path = merge (Base, R);
-          T.path.remove_dot_segments ();
-        }
-        T.query = R.query;
-      }
-      T.authority = Base.authority;
-    }
-    T.scheme = Base.scheme;
+parts join (parts const& base, parts const& reference, bool strict) {
+  std::optional<std::string> empty;
+  auto* ref_scheme = &reference.scheme;
+  if (!strict && reference.scheme == base.scheme) {
+    ref_scheme = &empty;
   }
-  T.fragment = R.fragment;
+
+  parts T;
+  if (*ref_scheme) {
+    T.scheme = *ref_scheme;
+    T.authority = reference.authority;
+    T.path = reference.path;
+    T.path.remove_dot_segments ();
+    T.query = reference.query;
+  } else {
+    if (reference.authority) {
+      T.authority = reference.authority;
+      T.path = reference.path;
+      T.path.remove_dot_segments ();
+      T.query = reference.query;
+    } else {
+      if (reference.path.empty ()) {
+        T.path = base.path;
+        T.query = reference.query ? reference.query : base.query;
+      } else {
+        if (reference.path.absolute) {
+          T.path.absolute = true;
+          T.path = reference.path;
+          T.path.remove_dot_segments ();
+        } else {
+          T.path = merge (base, reference);
+          T.path.remove_dot_segments ();
+        }
+        T.query = reference.query;
+      }
+      T.authority = base.authority;
+    }
+    T.scheme = base.scheme;
+  }
+  T.fragment = reference.fragment;
   return T;
 }
 
-std::optional<parts> join (std::string_view Base, std::string_view R) {
-  auto base_parts = split (Base);
+std::optional<parts> join (std::string_view Base, std::string_view R,
+                           bool strict) {
+  auto const base_parts = split (Base);
   if (!base_parts) {
     return {};
   }
-  auto reference_parts = split (R);
+  auto const reference_parts = split (R);
   if (!reference_parts) {
     return {};
   }
-  return join (*base_parts, *reference_parts);
+  return join (*base_parts, *reference_parts, strict);
 }
 
 std::ostream& compose (std::ostream& os, parts const& p) {

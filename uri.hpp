@@ -8,12 +8,10 @@
 
 namespace uri {
 
-using path_container = std::vector<std::string>;
-
 struct path_description {
   bool absolute = false;
   bool directory = false;
-  path_container segments;
+  std::vector<std::string> segments;
 
   constexpr bool operator== (path_description const& rhs) const {
     return absolute == rhs.absolute && directory == rhs.directory &&
@@ -67,8 +65,10 @@ struct parts {
 };
 
 std::optional<parts> split (std::string_view in);
-parts join (parts const& Base, parts const& R);
-std::optional<parts> join (std::string_view Base, std::string_view R);
+
+parts join (parts const& base, parts const& reference, bool strict = true);
+std::optional<parts> join (std::string_view Base, std::string_view R,
+                           bool strict = true);
 
 std::string percent_decode (std::string_view src);
 
