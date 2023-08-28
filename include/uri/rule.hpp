@@ -185,21 +185,22 @@ private:
   rule concat_impl (MatchFunction match, AcceptFunction accept,
                     bool optional) const;
 
+  static acceptor_container join (acceptor_container const& a,
+                                  acceptor_container const& b) {
+    acceptor_container result;
+    result.reserve (a.size () + b.size ());
+    result.insert (result.end (), a.begin (), a.end ());
+    result.insert (result.end (), b.begin (), b.end ());
+    return result;
+  }
+
   [[nodiscard]] rule join_rule (matched_result::value_type const& m) const {
     auto const& [head, acc] = m;
-    acceptor_container sum;
-    sum.reserve (acceptors_.size () + acc.size ());
-    sum.insert (sum.end (), acceptors_.begin (), acceptors_.end ());
-    sum.insert (sum.end (), acc.begin (), acc.end ());
-    return {tail_->substr (head.length ()), sum};
+    return {tail_->substr (head.length ()), join (acceptors_, acc)};
   }
 
   [[nodiscard]] rule join_rule (rule const& other) const {
-    acceptor_container sum;
-    sum.reserve (acceptors_.size () + other.acceptors_.size ());
-    sum.insert (sum.end (), acceptors_.begin (), acceptors_.end ());
-    sum.insert (sum.end (), other.acceptors_.begin (), other.acceptors_.end ());
-    return {other.tail_, sum};
+    return {other.tail_, join (acceptors_, other.acceptors_)};
   }
 
   static void accept_nop (std::string_view str) {
