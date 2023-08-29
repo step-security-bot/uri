@@ -1541,31 +1541,43 @@ TEST_F (Join, Normal) {
   EXPECT_EQ (uri::split ("http://a/b/c/g;x?y#s"), uri::join (base_, "g;x?y#s"));
   EXPECT_EQ (uri::split ("http://a/b/c/d;p?q"), uri::join (base_, ""));
 }
+// NOLINTNEXTLINE
 TEST_F (Join, LonelyDot) {
   EXPECT_EQ (uri::split ("http://a/b/c/"), uri::join (base_, "."));
 }
+// NOLINTNEXTLINE
 TEST_F (Join, DotSlash) {
   EXPECT_EQ (uri::split ("http://a/b/c/"), uri::join (base_, "./"));
 }
+// NOLINTNEXTLINE
 TEST_F (Join, DotDot) {
   EXPECT_EQ (uri::split ("http://a/b/"), uri::join (base_, ".."));
 }
+// NOLINTNEXTLINE
 TEST_F (Join, DotDotSlash) {
   EXPECT_EQ (uri::split ("http://a/b/"), uri::join (base_, "../"));
 }
+// NOLINTNEXTLINE
 TEST_F (Join, DotDotG) {
   EXPECT_EQ (uri::split ("http://a/b/g"), uri::join (base_, "../g"));
 }
+// NOLINTNEXTLINE
 TEST_F (Join, 2DotDots) {
   auto const expected = uri::split ("http://a/");
   auto const actual = uri::join (base_, "../.."sv);
   EXPECT_EQ (expected, actual);
 }
+// NOLINTNEXTLINE
 TEST_F (Join, 2DotDotsSlash) {
   EXPECT_EQ (uri::split ("http://a/"), uri::join (base_, "../../"));
 }
+// NOLINTNEXTLINE
 TEST_F (Join, 2DotDotsG) {
   EXPECT_EQ (uri::split ("http://a/g"), uri::join (base_, "../../g"));
+}
+// NOLINTNEXTLINE
+TEST_F (Join, BaseWithAuthorityAndNoPath) {
+  EXPECT_EQ (uri::split ("file://user@a/g"), uri::join ("file://user@a", "../../g"));
 }
 
 // NOLINTNEXTLINE
