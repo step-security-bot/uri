@@ -34,20 +34,20 @@ bool rule::done () const {
 rule::matched_result rule::matched (char const* name, rule const& in) const {
   assert (!tail_ || in.tail_);
   static constexpr auto trace = false;
-  if (trace) {
+  if constexpr (trace) {
     std::cout << (tail_ ? '*' : '-') << ' ' << std::quoted (name);
   }
 
   if (tail_) {
     std::string_view const str =
       in.tail_->substr (0, in.tail_->length () - tail_->length ());
-    if (trace) {
+    if constexpr (trace) {
       std::cout << ' ' << std::quoted (str) << '\n';
     }
     return std::make_tuple (str, acceptors_);
   }
 
-  if (trace) {
+  if constexpr (trace) {
     std::cout << '\n';
   }
   return {};
