@@ -25,12 +25,10 @@ namespace uri {
 
 struct path {
   bool absolute = false;
-  bool directory = false;
   std::vector<std::string> segments;
 
   constexpr bool operator== (path const& rhs) const {
-    return absolute == rhs.absolute && directory == rhs.directory &&
-           segments == rhs.segments;
+    return absolute == rhs.absolute && segments == rhs.segments;
   }
   constexpr bool operator!= (path const& rhs) const {
     return !operator== (rhs);
@@ -42,8 +40,9 @@ struct path {
   // http://tools.ietf.org/html/rfc3986#section-5.2.4
   void remove_dot_segments ();
   [[nodiscard]] constexpr bool empty () const noexcept {
-    return !absolute && !directory && segments.empty ();
+    return !absolute && segments.empty ();
   }
+  explicit operator std::string () const;
   explicit operator std::filesystem::path () const;
 };
 

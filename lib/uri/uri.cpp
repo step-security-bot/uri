@@ -384,14 +384,17 @@ auto segment_nz_nc (rule const& r) {
     .matched ("segment-nz-nc", r);
 }
 
-class record_path_abs {
+template <bool IsAbs>
+class append_dir {
 public:
-  explicit constexpr record_path_abs (uri::parts& result) noexcept
+  explicit constexpr append_dir (uri::parts& result) noexcept
       : result_{result} {}
   void operator() (std::string_view const str) {
     (void)str;
-    result_.path.absolute = true;
-    result_.path.directory = true;
+    if constexpr (IsAbs) {
+      result_.path.absolute = true;
+    }
+    result_.path.segments.emplace_back ();
   }
 
 private:
@@ -403,12 +406,20 @@ public:
   explicit constexpr append_segment (uri::parts& result) noexcept
       : result_{result} {}
   void operator() (std::string_view const seg) {
-    if (seg.length () == 0) {
-      result_.path.directory = true;
-    } else {
-      result_.path.directory = false;
-      result_.path.segments.emplace_back (seg);
-    }
+    assert (!result_.path.segments.empty ());
+    result_.path.segments.back () += seg;
+  }
+
+private:
+  uri::parts& result_;
+};
+
+class record_initial_segment {
+public:
+  explicit constexpr record_initial_segment (uri::parts& result) noexcept
+      : result_{result} {}
+  void operator() (std::string_view const seg) {
+    result_.path.segments.emplace_back (seg);
   }
 
 private:
@@ -420,7 +431,7 @@ auto path_abempty (uri::parts& result) {
   return [&result] (rule const& r) {
     return r
       .star ([&result] (rule const& r2) {
-        return r2.concat (solidus, record_path_abs{result})
+        return r2.concat (solidus, append_dir<true>{result})
           .concat (segment, append_segment{result})
           .matched ("\"/\" segment", r2);
       })
@@ -431,13 +442,13 @@ auto path_abempty (uri::parts& result) {
 auto path_absolute (uri::parts& result) {
   // path-absolute = "/" [ segment-nz *( "/" segment ) ]
   return [&result] (rule const& r) {
-    return r.concat (solidus, record_path_abs{result})
+    return r.concat (solidus, append_dir<true>{result})
       .optional ([&result] (rule const& r1) {
         return r1.concat (segment_nz, append_segment{result})
           .concat ([&result] (rule const& r2) {
             return r2
               .star ([&result] (rule const& r3) {
-                return r3.concat (solidus)
+                return r3.concat (solidus, append_dir<false>{result})
                   .concat (segment, append_segment{result})
                   .matched ("\"/\" segment", r3);
               })
@@ -452,9 +463,9 @@ auto path_absolute (uri::parts& result) {
 // path-noscheme = segment-nz-nc *( "/" segment )
 auto path_noscheme (uri::parts& result) {
   return [&result] (rule const& r) {
-    return r.concat (segment_nz_nc, append_segment{result})
+    return r.concat (segment_nz_nc, record_initial_segment{result})
       .star ([&result] (rule const& r1) {
-        return r1.concat (solidus)
+        return r1.concat (solidus, append_dir<false>{result})
           .concat (segment, append_segment{result})
           .matched ("\"/\" segment", r1);
       })
@@ -470,9 +481,9 @@ auto path_empty (rule const& r) {
 // path-rootless = segment-nz *( "/" segment )
 auto path_rootless (uri::parts& result) {
   return [&result] (rule const& r) {
-    return r.concat (segment_nz, append_segment{result})
+    return r.concat (segment_nz, record_initial_segment{result})
       .star ([&result] (rule const& r1) {
-        return r1.concat (solidus)
+        return r1.concat (solidus, append_dir<false>{result})
           .concat (segment, append_segment{result})
           .matched ("\"/\" segment", r1);
       })
@@ -631,7 +642,6 @@ uri::path merge (uri::parts const& base, uri::parts const& ref) {
   if (base.authority && base.path.empty ()) {
     uri::path r1;
     r1.absolute = true;
-    r1.directory = ref.path.directory;
     r1.segments = ref.path.segments;
     return r1;
   }
@@ -640,10 +650,9 @@ uri::path merge (uri::parts const& base, uri::parts const& ref) {
   // but the last segment of the base URI's path.
   uri::path r2;
   r2.absolute = base.path.absolute;
-  r2.directory = ref.path.directory;
 
   auto last = std::end (base.path.segments);
-  if (base.path.segments.size () > 1 && !base.path.directory) {
+  if (base.path.segments.size () > 1) {
     std::advance (last, -1);
   }
   auto out = std::back_inserter (r2.segments);
@@ -663,26 +672,51 @@ namespace uri {
 // section 5.2.4 "Remove Dot Segments"
 // (http://tools.ietf.org/html/rfc3986#section-5.2.4).
 void path::remove_dot_segments () {
-  auto const begin = std::begin (segments);
-  auto const end = std::end (segments);
+  auto const begin = std::begin (this->segments);
+  auto const end = std::end (this->segments);
   auto outit = begin;
+  bool last_dir = false;
   for (auto it = begin; it != end; ++it) {
     if (*it == ".") {
       // '.' means "the current directory": remove it.
+      last_dir = true;
     } else if (*it == "..") {
       // ".." is "up one directory" so, if we can, pop the last
       // element.
+      last_dir = true;
       if (outit != begin) {
         --outit;
       }
     } else {
+      last_dir = it->empty ();
       if (outit != it) {
         *outit = std::move (*it);
       }
       ++outit;
     }
   }
-  segments.erase (outit, end);
+  this->segments.erase (outit, end);
+
+  if (last_dir) {
+    if (segments.empty ()) {
+      this->segments.emplace_back ();
+    } else {
+      if (!this->segments.back ().empty ()) {
+        this->segments.emplace_back ();
+      }
+    }
+  }
+}
+
+path::operator std::string () const {
+  std::string p;
+  auto const* separator = absolute ? "/" : "";
+  for (auto const& seg : segments) {
+    p += separator;
+    p += seg;
+    separator = "/";
+  }
+  return p;
 }
 
 path::operator std::filesystem::path () const {
@@ -693,22 +727,13 @@ path::operator std::filesystem::path () const {
   for (auto const& seg : segments) {
     p /= seg;
   }
-  if (directory) {
-    p /= "";
-  }
   return p;
 }
 
 std::optional<parts> split (std::string_view const in) {
-  parts result;
   // URI-reference = URI / relative-ref
-  if (rule{in}.alternative (URI (result), URI_reference (result)).done ()) {
-    if (!result.path.segments.empty ()) {
-      auto const& b = result.path.segments.back ();
-      if (b == "." || b == "..") {
-        result.path.directory = true;
-      }
-    }
+  if (parts result;
+      rule{in}.alternative (URI (result), URI_reference (result)).done ()) {
     return result;
   }
   return {};
@@ -871,7 +896,7 @@ std::ostream& compose (std::ostream& os, parts const& p) {
   if (p.authority) {
     os << "//" << p.authority;
   }
-  os << static_cast<std::filesystem::path> (p.path).generic_string ();
+  os << static_cast<std::string> (p.path);
   if (p.query) {
     os << '?' << *p.query;
   }

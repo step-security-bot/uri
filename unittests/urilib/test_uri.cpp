@@ -19,6 +19,7 @@
 #include "uri/uri.hpp"
 
 using testing::ElementsAre;
+using namespace std::string_view_literals;
 
 // The tests in this group were generated using the 'abnfgen' tool with the
 // official URI ABNF. The tool was asked to produce 100 tests with the "attempt
@@ -31,11 +32,22 @@ TEST (Uri, Empty) {
   EXPECT_FALSE (x->scheme);
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
   EXPECT_FALSE (x->fragment);
 }
+// NOLINTNEXTLINE
+TEST (Uri, EmptyPathComponents) {
+  std::optional<uri::parts> const x = uri::split ("/foo///bar");
+  ASSERT_TRUE (x);
+  EXPECT_FALSE (x->scheme);
+  EXPECT_FALSE (x->authority);
+  EXPECT_TRUE (x->path.absolute);
+  EXPECT_THAT (x->path.segments, ElementsAre ("foo", "", "", "bar"));
+  EXPECT_FALSE (x->query);
+  EXPECT_FALSE (x->fragment);
+}
+
 // NOLINTNEXTLINE
 TEST (Uri, 0001) {
   auto const x = uri::split ("C://[::A:eE5c]:2194/&///@//:_/%aB//.////#");
@@ -45,10 +57,13 @@ TEST (Uri, 0001) {
   EXPECT_EQ (x->authority.host, "[::A:eE5c]");
   EXPECT_EQ (x->authority.port, "2194");
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_TRUE (x->path.directory);
-  EXPECT_THAT (x->path.segments, ElementsAre ("&", "@", ":_", "%aB", "."));
+  EXPECT_THAT (x->path.segments, ElementsAre ("&", "", "", "@", "", ":_", "%aB",
+                                              "", ".", "", "", "", ""));
   EXPECT_FALSE (x->query);
   EXPECT_EQ (x->fragment, "");
+  EXPECT_EQ (static_cast<std::string> (x->path), "/&///@//:_/%aB//.////");
+  EXPECT_EQ (static_cast<std::filesystem::path> (x->path).generic_string (),
+             "/&/@/:_/%aB/./");
 }
 // NOLINTNEXTLINE
 TEST (Uri, 0002) {
@@ -57,8 +72,7 @@ TEST (Uri, 0002) {
   EXPECT_EQ (x->scheme, "P-.");
   EXPECT_FALSE (x->authority);
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_TRUE (x->path.directory);
-  EXPECT_TRUE (x->path.segments.empty ());
+  EXPECT_THAT (x->path.segments, ElementsAre (""));
   EXPECT_EQ (x->query, "/?");
   EXPECT_FALSE (x->fragment);
 }
@@ -69,7 +83,6 @@ TEST (Uri, 0003) {
   EXPECT_EQ (x->scheme, "i+V");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "");
   EXPECT_FALSE (x->fragment);
@@ -81,10 +94,12 @@ TEST (Uri, 0004) {
   EXPECT_EQ (x->scheme, "L");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_THAT (x->path.segments, ElementsAre ("%Cf"));
   EXPECT_FALSE (x->query);
   EXPECT_EQ (x->fragment, "%dD/?H");
+  EXPECT_EQ (static_cast<std::string> (x->path), "%Cf");
+  EXPECT_EQ (static_cast<std::filesystem::path> (x->path).generic_string (),
+             "%Cf");
 }
 // NOLINTNEXTLINE
 TEST (Uri, 0005) {
@@ -93,9 +108,9 @@ TEST (Uri, 0005) {
   EXPECT_EQ (x->scheme, "E07");
   EXPECT_FALSE (x->authority);
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_THAT (x->path.segments,
-               ElementsAre ("8=-~%bF", "%36", "'", "%16N%78", ")", "%53", ";"));
+               ElementsAre ("8=-~%bF", "", "%36", "", "", "", "'", "%16N%78",
+                            "", ")", "%53", ";"));
   EXPECT_EQ (x->query, "*!");
   EXPECT_FALSE (x->fragment);
 }
@@ -106,7 +121,6 @@ TEST (Uri, 0006) {
   EXPECT_EQ (x->scheme, "v");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
   EXPECT_FALSE (x->fragment);
@@ -118,8 +132,7 @@ TEST (Uri, 0007) {
   EXPECT_EQ (x->scheme, "YXa");
   EXPECT_FALSE (x->authority);
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_TRUE (x->path.directory);
-  EXPECT_TRUE (x->path.segments.empty ());
+  EXPECT_THAT (x->path.segments, ElementsAre (""));
   EXPECT_FALSE (x->query);
   EXPECT_EQ (x->fragment, "B");
 }
@@ -130,7 +143,6 @@ TEST (Uri, 0008) {
   EXPECT_EQ (x->scheme, "n");
   EXPECT_FALSE (x->authority);
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_THAT (x->path.segments, ElementsAre (",+"));
   EXPECT_EQ (x->query, "$");
   EXPECT_EQ (x->fragment, "(+!)D");
@@ -142,8 +154,7 @@ TEST (Uri, 0009) {
   EXPECT_EQ (x->scheme, "m");
   EXPECT_FALSE (x->authority);
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_TRUE (x->path.directory);
-  EXPECT_TRUE (x->path.segments.empty ());
+  EXPECT_THAT (x->path.segments, ElementsAre (""));
   EXPECT_EQ (x->query, "cJ");
   EXPECT_FALSE (x->fragment);
 }
@@ -154,9 +165,8 @@ TEST (Uri, 0010) {
   EXPECT_EQ (x->scheme, "zR");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_TRUE (x->path.directory);
   EXPECT_THAT (x->path.segments,
-               ElementsAre ("d", "M", "kx", "s", "GTl", "SgA"));
+               ElementsAre ("d", "M", "kx", "s", "GTl", "", "", "SgA", ""));
   EXPECT_EQ (x->query, "");
   EXPECT_EQ (x->fragment, "");
 }
@@ -167,7 +177,6 @@ TEST (Uri, 0011) {
   EXPECT_EQ (x->scheme, "t");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_THAT (x->path.segments, ElementsAre ("W"));
   EXPECT_EQ (x->query, "p");
   EXPECT_EQ (x->fragment, "");
@@ -179,8 +188,7 @@ TEST (Uri, 0012) {
   EXPECT_EQ (x->scheme, "QrIq");
   EXPECT_FALSE (x->authority);
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_TRUE (x->path.directory);
-  EXPECT_TRUE (x->path.segments.empty ());
+  EXPECT_THAT (x->path.segments, ElementsAre (""));
   EXPECT_FALSE (x->query);
   EXPECT_EQ (x->fragment, "");
 }
@@ -191,8 +199,7 @@ TEST (Uri, 0013) {
   EXPECT_EQ (x->scheme, "OuU");
   EXPECT_FALSE (x->authority);
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_TRUE (x->path.directory);
-  EXPECT_TRUE (x->path.segments.empty ());
+  EXPECT_THAT (x->path.segments, ElementsAre (""));
   EXPECT_EQ (x->query, "bZK");
   EXPECT_FALSE (x->fragment);
 }
@@ -203,7 +210,6 @@ TEST (Uri, 0014) {
   EXPECT_EQ (x->scheme, "Fjfe");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "h");
   EXPECT_FALSE (x->fragment);
@@ -215,8 +221,7 @@ TEST (Uri, 0015) {
   EXPECT_EQ (x->scheme, "y");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_TRUE (x->path.directory);
-  EXPECT_THAT (x->path.segments, ElementsAre ("w", "o", "b"));
+  EXPECT_THAT (x->path.segments, ElementsAre ("w", "o", "b", ""));
   EXPECT_EQ (x->query, "lKTF");
   EXPECT_FALSE (x->fragment);
 }
@@ -229,7 +234,6 @@ TEST (Uri, 0016) {
   EXPECT_EQ (x->authority.host, "230.109.31.250");
   EXPECT_FALSE (x->authority.port);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
   EXPECT_EQ (x->fragment, ".");
@@ -243,10 +247,11 @@ TEST (Uri, 0017) {
   EXPECT_EQ (x->authority.host, "=i%bD%Cb&*%Ea)%CE");
   EXPECT_FALSE (x->authority.port);
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_TRUE (x->path.directory);
-  EXPECT_THAT (x->path.segments, ElementsAre (":%cA"));
+  EXPECT_THAT (x->path.segments, ElementsAre ("", ":%cA", "", ""));
   EXPECT_FALSE (x->query);
   EXPECT_EQ (x->fragment, "?//");
+  EXPECT_EQ (static_cast<std::string> (x->path), "//:%cA//");
+  EXPECT_EQ (static_cast<std::filesystem::path> (x->path), "/:%cA/");
 }
 // NOLINTNEXTLINE
 TEST (Uri, 0018) {
@@ -255,7 +260,6 @@ TEST (Uri, 0018) {
   EXPECT_EQ (x->scheme, "X");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
   EXPECT_EQ (x->fragment, "");
@@ -267,7 +271,6 @@ TEST (Uri, 0019) {
   EXPECT_EQ (x->scheme, "U");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "?");
   EXPECT_FALSE (x->fragment);
@@ -279,7 +282,6 @@ TEST (Uri, 0020) {
   EXPECT_EQ (x->scheme, "G");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
   EXPECT_FALSE (x->fragment);
@@ -291,7 +293,6 @@ TEST (Uri, 0021) {
   EXPECT_EQ (x->scheme, "l6+");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "");
   EXPECT_EQ (x->fragment, "");
@@ -305,7 +306,6 @@ TEST (Uri, 0022) {
   EXPECT_EQ (x->authority.host, "[VD.~]");
   EXPECT_EQ (x->authority.port, "");
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "/@");
   EXPECT_EQ (x->fragment, "");
@@ -319,7 +319,6 @@ TEST (Uri, 0023) {
   EXPECT_EQ (x->authority.host, "3.76.206.5");
   EXPECT_EQ (x->authority.port, "8966");
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "/");
   EXPECT_FALSE (x->fragment);
@@ -333,7 +332,6 @@ TEST (Uri, 0024) {
   EXPECT_EQ (x->authority.host, "");
   EXPECT_FALSE (x->authority.port);
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_THAT (x->path.segments, ElementsAre ("::"));
   EXPECT_FALSE (x->query);
   EXPECT_FALSE (x->fragment);
@@ -345,7 +343,6 @@ TEST (Uri, 0025) {
   EXPECT_EQ (x->scheme, "g0");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "");
   EXPECT_EQ (x->fragment, "");
@@ -357,7 +354,6 @@ TEST (Uri, 0026) {
   EXPECT_EQ (x->scheme, "Do1-");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
   EXPECT_FALSE (x->fragment);
@@ -369,7 +365,6 @@ TEST (Uri, 0027) {
   EXPECT_EQ (x->scheme, "K");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "");
   EXPECT_FALSE (x->fragment);
@@ -383,7 +378,6 @@ TEST (Uri, 0028) {
   EXPECT_EQ (x->authority.host, "[::F]");
   EXPECT_EQ (x->authority.port, "");
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_THAT (x->path.segments, ElementsAre ("::@~"));
   EXPECT_EQ (x->query, "@/");
   EXPECT_FALSE (x->fragment);
@@ -395,7 +389,6 @@ TEST (Uri, 0029) {
   EXPECT_EQ (x->scheme, "N");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
   EXPECT_EQ (x->fragment, "");
@@ -407,7 +400,6 @@ TEST (Uri, 0030) {
   EXPECT_EQ (x->scheme, "o");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
   EXPECT_FALSE (x->fragment);
@@ -419,24 +411,24 @@ TEST (Uri, 0031) {
   EXPECT_EQ (x->scheme, "k-0+");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, R"(??/)");
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
 TEST (Uri, 0032) {
-  auto const x = uri::split (R"(y://%DD@253.216.255.251//:./??/://;)");
+  auto const x = uri::split (R"(y://%DD@253.216.255.251//aa/??/://;)");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "y");
   EXPECT_EQ (x->authority.userinfo, "%DD");
   EXPECT_EQ (x->authority.host, "253.216.255.251");
   EXPECT_FALSE (x->authority.port);
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_TRUE (x->path.directory);
-  EXPECT_THAT (x->path.segments, ElementsAre (":."));
+  EXPECT_THAT (x->path.segments, ElementsAre ("", "aa", ""));
   EXPECT_EQ (x->query, "?/://;");
   EXPECT_FALSE (x->fragment);
+  EXPECT_EQ (static_cast<std::string> (x->path), "//aa/");
+  EXPECT_EQ (static_cast<std::filesystem::path> (x->path), "/aa/");
 }
 // NOLINTNEXTLINE
 TEST (Uri, 0033) {
@@ -447,24 +439,24 @@ TEST (Uri, 0033) {
   EXPECT_EQ (x->authority.host, "[AC::1:6DEb:14.97.229.249]");
   EXPECT_EQ (x->authority.port, "");
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "/");
   EXPECT_EQ (x->fragment, "??~(");
 }
 // NOLINTNEXTLINE
 TEST (Uri, 0034) {
-  auto const x = uri::split ("p://@26.254.86.252://!;");
+  auto const x = uri::split ("p://@26.254.86.252://aa");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "p");
   EXPECT_EQ (x->authority.userinfo, "");
   EXPECT_EQ (x->authority.host, "26.254.86.252");
   EXPECT_EQ (x->authority.port, "");
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
-  EXPECT_THAT (x->path.segments, ElementsAre ("!;"));
+  EXPECT_THAT (x->path.segments, ElementsAre ("", "aa"));
   EXPECT_FALSE (x->query);
   EXPECT_FALSE (x->fragment);
+  EXPECT_EQ (static_cast<std::string> (x->path), "//aa");
+  EXPECT_EQ (static_cast<std::filesystem::path> (x->path), "/aa");
 }
 // NOLINTNEXTLINE
 TEST (Uri, 0035) {
@@ -473,7 +465,6 @@ TEST (Uri, 0035) {
   EXPECT_EQ (x->scheme, "P+-n");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
   EXPECT_EQ (x->fragment, "/%f0");
@@ -485,7 +476,6 @@ TEST (Uri, 0036) {
   EXPECT_EQ (x->scheme, "u");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "");
   EXPECT_FALSE (x->fragment);
@@ -499,7 +489,6 @@ TEST (Uri, 0037) {
   EXPECT_EQ (x->authority.host, "[::b:E:A:53.48.69.41]");
   EXPECT_FALSE (x->authority.port);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "");
   EXPECT_FALSE (x->fragment);
@@ -511,7 +500,6 @@ TEST (Uri, 0038) {
   EXPECT_EQ (x->scheme, "h.P+9");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, ":");
   EXPECT_EQ (x->fragment, "?");
@@ -523,7 +511,6 @@ TEST (Uri, 0039) {
   EXPECT_EQ (x->scheme, "x");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "?");
   EXPECT_EQ (x->fragment, "");
@@ -535,7 +522,6 @@ TEST (Uri, 0040) {
   EXPECT_EQ (x->scheme, "A");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
   EXPECT_EQ (x->fragment, "");
@@ -547,7 +533,6 @@ TEST (Uri, 0041) {
   EXPECT_EQ (x->scheme, "Lp.");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "");
   EXPECT_EQ (x->fragment, "");
@@ -559,7 +544,6 @@ TEST (Uri, 0042) {
   EXPECT_EQ (x->scheme, "d-");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
   EXPECT_EQ (x->fragment, "");
@@ -571,7 +555,6 @@ TEST (Uri, 0043) {
   EXPECT_EQ (x->scheme, "h-.");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "/?/");
   EXPECT_EQ (x->fragment, "");
@@ -583,7 +566,6 @@ TEST (Uri, 0044) {
   EXPECT_EQ (x->scheme, "d");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
   EXPECT_FALSE (x->fragment);
@@ -595,7 +577,6 @@ TEST (Uri, 0045) {
   EXPECT_EQ (x->scheme, "L");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
   EXPECT_FALSE (x->fragment);
@@ -609,7 +590,6 @@ TEST (Uri, 0046) {
   EXPECT_EQ (x->authority.host, "[9:BB:8:DAc:BbAA:E:a::]");
   EXPECT_FALSE (x->authority.port);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "");
   EXPECT_EQ (x->fragment, "@$");
@@ -623,7 +603,6 @@ TEST (Uri, 0047) {
   EXPECT_EQ (x->authority.host, "[::1E:BB:a:5c1:Dd:40.44.228.108]");
   EXPECT_FALSE (x->authority.port);
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_THAT (x->path.segments, ElementsAre (";"));
   EXPECT_EQ (x->query, "");
   EXPECT_EQ (x->fragment, "");
@@ -637,7 +616,6 @@ TEST (Uri, 0048) {
   EXPECT_EQ (x->authority.host, "[c:BC:b:A:Bd:D:dC1f:cedB]");
   EXPECT_FALSE (x->authority.port);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "/");
   EXPECT_EQ (x->fragment, "/:/%FA");
@@ -649,7 +627,6 @@ TEST (Uri, 0049) {
   EXPECT_EQ (x->scheme, "x.2");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
   EXPECT_EQ (x->fragment, "");
@@ -663,7 +640,6 @@ TEST (Uri, 0050) {
   EXPECT_EQ (x->authority.host, "[::F:e:4b:eCBE:f:c]");
   EXPECT_FALSE (x->authority.port);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
   EXPECT_FALSE (x->fragment);
@@ -677,7 +653,6 @@ TEST (Uri, 0051) {
   EXPECT_EQ (x->authority.host, "[e:C:Aa:eD::FDfD:b:F]");
   EXPECT_EQ (x->authority.port, "");
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "");
   EXPECT_FALSE (x->fragment);
@@ -689,7 +664,6 @@ TEST (Uri, 0052) {
   EXPECT_EQ (x->scheme, "G+");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
   EXPECT_FALSE (x->fragment);
@@ -703,7 +677,6 @@ TEST (Uri, 0053) {
   EXPECT_EQ (x->authority.host, "[vA5.+:=.p~=)=&_;-=7)(.;]");
   EXPECT_EQ (x->authority.port, "768295");
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_THAT (x->path.segments, ElementsAre ("+"));
   EXPECT_FALSE (x->query);
   EXPECT_FALSE (x->fragment);
@@ -717,7 +690,6 @@ TEST (Uri, 0054) {
   EXPECT_EQ (x->authority.host, "[::]");
   EXPECT_EQ (x->authority.port, "9831");
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
   EXPECT_EQ (x->fragment, "");
@@ -729,7 +701,6 @@ TEST (Uri, 0055) {
   EXPECT_EQ (x->scheme, "v-2e.l");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, ":????:/");
   EXPECT_FALSE (x->fragment);
@@ -743,7 +714,6 @@ TEST (Uri, 0056) {
   EXPECT_EQ (x->authority.host, "[F::219.226.254.253]");
   EXPECT_EQ (x->authority.port, "900");
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_THAT (x->path.segments, ElementsAre ("'R"));
   EXPECT_FALSE (x->query);
   EXPECT_EQ (x->fragment, "");
@@ -757,7 +727,6 @@ TEST (Uri, 0057) {
   EXPECT_EQ (x->authority.host, "[daf::B:7:e:b:D:F]");
   EXPECT_EQ (x->authority.port, "730");
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
   EXPECT_FALSE (x->fragment);
@@ -771,7 +740,6 @@ TEST (Uri, 0058) {
   EXPECT_EQ (x->authority.host, "[::]");
   EXPECT_EQ (x->authority.port, "7");
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
   EXPECT_FALSE (x->fragment);
@@ -785,10 +753,11 @@ TEST (Uri, 0059) {
   EXPECT_EQ (x->authority.host, "[::dFC:d:6:d]");
   EXPECT_EQ (x->authority.port, "");
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_TRUE (x->path.directory);
-  EXPECT_TRUE (x->path.segments.empty ());
+  EXPECT_THAT (x->path.segments, ElementsAre ("", ""));
   EXPECT_FALSE (x->query);
   EXPECT_EQ (x->fragment, "");
+  EXPECT_EQ (static_cast<std::string> (x->path), "//");
+  EXPECT_EQ (static_cast<std::filesystem::path> (x->path), "/");
 }
 // NOLINTNEXTLINE
 TEST (Uri, 0060) {
@@ -799,7 +768,6 @@ TEST (Uri, 0060) {
   EXPECT_EQ (x->authority.host, "[dCDa:c:e:B:F::D:a]");
   EXPECT_EQ (x->authority.port, "");
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_THAT (x->path.segments, ElementsAre ("%Dc"));
   EXPECT_FALSE (x->query);
   EXPECT_FALSE (x->fragment);
@@ -811,7 +779,6 @@ TEST (Uri, 0061) {
   EXPECT_EQ (x->scheme, "mF2");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
   EXPECT_FALSE (x->fragment);
@@ -825,7 +792,6 @@ TEST (Uri, 0062) {
   EXPECT_EQ (x->authority.host, "[d1b:CF:AbBa::F:d:11.246.155.253]");
   EXPECT_FALSE (x->authority.port);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "");
   EXPECT_FALSE (x->fragment);
@@ -839,7 +805,6 @@ TEST (Uri, 0063) {
   EXPECT_EQ (x->authority.host, "[7d::6:df:f:245.95.78.9]");
   EXPECT_EQ (x->authority.port, "");
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "?");
   EXPECT_FALSE (x->fragment);
@@ -853,7 +818,6 @@ TEST (Uri, 0064) {
   EXPECT_EQ (x->authority.host, "[::bba:B:6:1.255.161.3]");
   EXPECT_EQ (x->authority.port, "");
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
   EXPECT_EQ (x->fragment, "?/");
@@ -867,7 +831,6 @@ TEST (Uri, 0065) {
   EXPECT_EQ (x->authority.host, "[fdF::f2]");
   EXPECT_FALSE (x->authority.port);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
   EXPECT_FALSE (x->fragment);
@@ -881,10 +844,11 @@ TEST (Uri, 0066) {
   EXPECT_EQ (x->authority.host, "[::A:C:c]");
   EXPECT_FALSE (x->authority.port);
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_TRUE (x->path.directory);
-  EXPECT_TRUE (x->path.segments.empty ());
+  EXPECT_THAT (x->path.segments, ElementsAre (""));
   EXPECT_FALSE (x->query);
   EXPECT_FALSE (x->fragment);
+  EXPECT_EQ (static_cast<std::string> (x->path), "/");
+  EXPECT_EQ (static_cast<std::filesystem::path> (x->path), "/");
 }
 // NOLINTNEXTLINE
 TEST (Uri, 0067) {
@@ -893,7 +857,6 @@ TEST (Uri, 0067) {
   EXPECT_EQ (x->scheme, "K");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "");
   EXPECT_EQ (x->fragment, "");
@@ -907,7 +870,6 @@ TEST (Uri, 0068) {
   EXPECT_EQ (x->authority.host, "[c:CEa:cd1B:f:f:D::ef]");
   EXPECT_FALSE (x->authority.port);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "");
   EXPECT_EQ (x->fragment, "%bC@/:");
@@ -922,7 +884,6 @@ TEST (Uri, 0069) {
   EXPECT_EQ (x->authority.host, "[::C:dEd:4:218.255.251.5]");
   EXPECT_EQ (x->authority.port, "8");
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_THAT (x->path.segments, ElementsAre ("@.;J"));
   EXPECT_EQ (x->query, R"(?Q??%48/)");
   EXPECT_EQ (x->fragment, "");
@@ -934,7 +895,6 @@ TEST (Uri, 0070) {
   EXPECT_EQ (x->scheme, "I");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "");
   EXPECT_EQ (x->fragment, "");
@@ -948,10 +908,11 @@ TEST (Uri, 0071) {
   EXPECT_EQ (x->authority.host, "[::Ec:AcA:9a]");
   EXPECT_EQ (x->authority.port, "92");
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_TRUE (x->path.directory);
-  EXPECT_THAT (x->path.segments, ElementsAre ("%8a"));
+  EXPECT_THAT (x->path.segments, ElementsAre ("%8a", ""));
   EXPECT_FALSE (x->query);
   EXPECT_EQ (x->fragment, "");
+  EXPECT_EQ (static_cast<std::string> (x->path), "/%8a/");
+  EXPECT_EQ (static_cast<std::filesystem::path> (x->path), "/%8a/");
 }
 // NOLINTNEXTLINE
 TEST (Uri, 0072) {
@@ -960,7 +921,6 @@ TEST (Uri, 0072) {
   EXPECT_EQ (x->scheme, "N+");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "~");
   EXPECT_FALSE (x->fragment);
@@ -972,7 +932,6 @@ TEST (Uri, 0073) {
   EXPECT_EQ (x->scheme, "B");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "/.");
   EXPECT_EQ (x->fragment, "?");
@@ -986,7 +945,6 @@ TEST (Uri, 0074) {
   EXPECT_EQ (x->authority.host, "[d::Baa:dE:D]");
   EXPECT_FALSE (x->authority.port);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
   EXPECT_EQ (x->fragment, "/");
@@ -1000,7 +958,6 @@ TEST (Uri, 0075) {
   EXPECT_EQ (x->authority.host, "[::F:ab79:B:fa:C]");
   EXPECT_FALSE (x->authority.port);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
   EXPECT_EQ (x->fragment, "");
@@ -1014,10 +971,12 @@ TEST (Uri, 0076) {
   EXPECT_EQ (x->authority.host, "[::BBc:d0:EA:3.67.149.137]");
   EXPECT_EQ (x->authority.port, "");
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_TRUE (x->path.directory);
-  EXPECT_TRUE (x->path.segments.empty ());
+  EXPECT_THAT (x->path.segments, ElementsAre (""));
   EXPECT_EQ (x->query, "");
   EXPECT_EQ (x->fragment, "/");
+
+  EXPECT_EQ (static_cast<std::string> (x->path), "/");
+  EXPECT_EQ (static_cast<std::filesystem::path> (x->path), "/");
 }
 // NOLINTNEXTLINE
 TEST (Uri, 0077) {
@@ -1028,10 +987,12 @@ TEST (Uri, 0077) {
   EXPECT_EQ (x->authority.host, "[4Bbc:bb::cDcd:5:c4:e:B1]");
   EXPECT_EQ (x->authority.port, "");
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_TRUE (x->path.directory);
-  EXPECT_THAT (x->path.segments, ElementsAre ("%CA@", "."));
+  EXPECT_THAT (x->path.segments, ElementsAre ("%CA@", ".", ""));
   EXPECT_EQ (x->query, "?");
   EXPECT_FALSE (x->fragment);
+
+  EXPECT_EQ (static_cast<std::string> (x->path), "/%CA@/./");
+  EXPECT_EQ (static_cast<std::filesystem::path> (x->path), "/%CA@/./");
 }
 // NOLINTNEXTLINE
 TEST (Uri, 0078) {
@@ -1042,10 +1003,12 @@ TEST (Uri, 0078) {
   EXPECT_EQ (x->authority.host, "[CF::]");
   EXPECT_EQ (x->authority.port, "");
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
-  EXPECT_THAT (x->path.segments, ElementsAre ("!"));
+  EXPECT_THAT (x->path.segments, ElementsAre ("", "!"));
   EXPECT_EQ (x->query, "");
   EXPECT_FALSE (x->fragment);
+
+  EXPECT_EQ (static_cast<std::string> (x->path), "//!");
+  EXPECT_EQ (static_cast<std::filesystem::path> (x->path), "/!");
 }
 // NOLINTNEXTLINE
 TEST (Uri, 0079) {
@@ -1054,7 +1017,6 @@ TEST (Uri, 0079) {
   EXPECT_EQ (x->scheme, "SF6");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
   EXPECT_EQ (x->fragment, "");
@@ -1066,7 +1028,6 @@ TEST (Uri, 0080) {
   EXPECT_EQ (x->scheme, "R");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, R"(????////???/////)");
   EXPECT_EQ (x->fragment, "??@?_:?");
@@ -1078,7 +1039,6 @@ TEST (Uri, 0081) {
   EXPECT_EQ (x->scheme, "g");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
   EXPECT_FALSE (x->fragment);
@@ -1090,7 +1050,6 @@ TEST (Uri, 0082) {
   EXPECT_EQ (x->scheme, "D-ir+.PA");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "?");
   EXPECT_EQ (x->fragment, "");
@@ -1102,7 +1061,6 @@ TEST (Uri, 0083) {
   EXPECT_EQ (x->scheme, "Z-.-");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
   EXPECT_FALSE (x->fragment);
@@ -1114,7 +1072,6 @@ TEST (Uri, 0084) {
   EXPECT_EQ (x->scheme, "y-");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
   EXPECT_FALSE (x->fragment);
@@ -1126,7 +1083,6 @@ TEST (Uri, 0085) {
   EXPECT_EQ (x->scheme, "p");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "");
   EXPECT_FALSE (x->fragment);
@@ -1138,7 +1094,6 @@ TEST (Uri, 0086) {
   EXPECT_EQ (x->scheme, "M");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
   EXPECT_EQ (x->fragment, "*.");
@@ -1150,7 +1105,6 @@ TEST (Uri, 0087) {
   EXPECT_EQ (x->scheme, "I");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "%ab");
   EXPECT_EQ (x->fragment, "/.");
@@ -1162,7 +1116,6 @@ TEST (Uri, 0088) {
   EXPECT_EQ (x->scheme, "v6");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
   EXPECT_EQ (x->fragment, ":?");
@@ -1174,7 +1127,6 @@ TEST (Uri, 0089) {
   EXPECT_EQ (x->scheme, "D");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
   EXPECT_EQ (x->fragment, "");
@@ -1186,7 +1138,6 @@ TEST (Uri, 0090) {
   EXPECT_EQ (x->scheme, "e.");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
   EXPECT_EQ (x->fragment, "");
@@ -1198,7 +1149,6 @@ TEST (Uri, 0091) {
   EXPECT_EQ (x->scheme, "L");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "");
   EXPECT_EQ (x->fragment, "");
@@ -1210,7 +1160,6 @@ TEST (Uri, 0092) {
   EXPECT_EQ (x->scheme, "g-");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
   EXPECT_EQ (x->fragment, "");
@@ -1222,7 +1171,6 @@ TEST (Uri, 0093) {
   EXPECT_EQ (x->scheme, "H");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
   EXPECT_FALSE (x->fragment);
@@ -1234,7 +1182,6 @@ TEST (Uri, 0094) {
   EXPECT_EQ (x->scheme, "K");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "?");
   EXPECT_FALSE (x->fragment);
@@ -1246,7 +1193,6 @@ TEST (Uri, 0095) {
   EXPECT_EQ (x->scheme, "c-");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "");
   EXPECT_EQ (x->fragment, "");
@@ -1258,7 +1204,6 @@ TEST (Uri, 0096) {
   EXPECT_EQ (x->scheme, "Bw");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "");
   EXPECT_FALSE (x->fragment);
@@ -1270,7 +1215,6 @@ TEST (Uri, 0097) {
   EXPECT_EQ (x->scheme, "hC");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "");
   EXPECT_FALSE (x->fragment);
@@ -1282,7 +1226,6 @@ TEST (Uri, 0098) {
   EXPECT_EQ (x->scheme, "q");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "/");
   EXPECT_EQ (x->fragment, "/");
@@ -1294,7 +1237,6 @@ TEST (Uri, 0099) {
   EXPECT_EQ (x->scheme, "L");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
   EXPECT_FALSE (x->fragment);
@@ -1306,7 +1248,6 @@ TEST (Uri, 0100) {
   EXPECT_EQ (x->scheme, "W-");
   EXPECT_FALSE (x->authority);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "");
   EXPECT_FALSE (x->fragment);
@@ -1317,7 +1258,6 @@ TEST (RemoveDotSegments, LeadingDotDotSlash) {
   auto x = uri::split ("../bar");
   ASSERT_TRUE (x);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_THAT (x->path.segments, ElementsAre ("..", "bar"));
   x->path.remove_dot_segments ();
   EXPECT_THAT (x->path.segments, ElementsAre ("bar"));
@@ -1327,7 +1267,6 @@ TEST (RemoveDotSegments, LeadingDotSlash) {
   auto x = uri::split ("./bar");
   ASSERT_TRUE (x);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_THAT (x->path.segments, ElementsAre (".", "bar"));
   x->path.remove_dot_segments ();
   EXPECT_THAT (x->path.segments, ElementsAre ("bar"));
@@ -1337,11 +1276,9 @@ TEST (RemoveDotSegments, LeadingDotDotSlashDotSlash) {
   auto x = uri::split (".././bar");
   ASSERT_TRUE (x);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_THAT (x->path.segments, ElementsAre ("..", ".", "bar"));
   x->path.remove_dot_segments ();
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_THAT (x->path.segments, ElementsAre ("bar"));
 }
 // NOLINTNEXTLINE
@@ -1349,67 +1286,45 @@ TEST (RemoveDotSegments, MidDot) {
   auto x = uri::split ("/foo/./bar");
   ASSERT_TRUE (x);
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_THAT (x->path.segments, ElementsAre ("foo", ".", "bar"));
   x->path.remove_dot_segments ();
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_THAT (x->path.segments, ElementsAre ("foo", "bar"));
-}
-// NOLINTNEXTLINE
-TEST (RemoveDotSegments, TrailingSlashDotSlash) {
-  auto x = uri::split ("/bar/./");
-  ASSERT_TRUE (x);
-  EXPECT_TRUE (x->path.absolute);
-  EXPECT_TRUE (x->path.directory);
-  EXPECT_THAT (x->path.segments, ElementsAre ("bar", "."));
-
-  x->path.remove_dot_segments ();
-
-  EXPECT_TRUE (x->path.absolute);
-  EXPECT_TRUE (x->path.directory);
-  EXPECT_THAT (x->path.segments, ElementsAre ("bar"));
 }
 // NOLINTNEXTLINE
 TEST (RemoveDotSegments, LonelySlashDot) {
   auto x = uri::split ("/.");
   ASSERT_TRUE (x);
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_TRUE (x->path.directory);
   EXPECT_THAT (x->path.segments, ElementsAre ("."));
 
   x->path.remove_dot_segments ();
 
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_TRUE (x->path.directory);
-  EXPECT_TRUE (x->path.segments.empty ());
+  EXPECT_THAT (x->path.segments, ElementsAre (""));
 }
 // NOLINTNEXTLINE
-TEST (RemoveDotSegments, TrailingDot) {
+TEST (RemoveDotSegments, TrailingDotSlash) {
   auto x = uri::split ("/bar/./");
   ASSERT_TRUE (x);
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_TRUE (x->path.directory);
-  EXPECT_THAT (x->path.segments, ElementsAre ("bar", "."));
+  EXPECT_THAT (x->path.segments, ElementsAre ("bar", ".", ""));
 
   x->path.remove_dot_segments ();
 
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_TRUE (x->path.directory);
-  EXPECT_THAT (x->path.segments, ElementsAre ("bar"));
+  EXPECT_THAT (x->path.segments, ElementsAre ("bar", ""));
 }
 // NOLINTNEXTLINE
 TEST (RemoveDotSegments, MidSlashDotDot) {
   auto x = uri::split ("/foo/../bar");
   ASSERT_TRUE (x);
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_THAT (x->path.segments, ElementsAre ("foo", "..", "bar"));
 
   x->path.remove_dot_segments ();
 
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_THAT (x->path.segments, ElementsAre ("bar"));
 }
 // NOLINTNEXTLINE
@@ -1417,98 +1332,93 @@ TEST (RemoveDotSegments, TrailingDotDotSlash) {
   auto x = uri::split ("/bar/../");
   ASSERT_TRUE (x);
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_TRUE (x->path.directory);
-  EXPECT_THAT (x->path.segments, ElementsAre ("bar", ".."));
+  EXPECT_THAT (x->path.segments, ElementsAre ("bar", "..", ""));
 
   x->path.remove_dot_segments ();
 
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_TRUE (x->path.directory);
-  EXPECT_THAT (x->path.segments, ElementsAre ());
+  EXPECT_THAT (x->path.segments, ElementsAre (""));
 }
 // NOLINTNEXTLINE
 TEST (RemoveDotSegments, LonelySlashDotDot) {
   auto x = uri::split ("/..");
   ASSERT_TRUE (x);
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_TRUE (x->path.directory);
   EXPECT_THAT (x->path.segments, ElementsAre (".."));
 
   x->path.remove_dot_segments ();
 
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_TRUE (x->path.directory);
-  EXPECT_THAT (x->path.segments, ElementsAre ());
+  EXPECT_THAT (x->path.segments, ElementsAre (""));
+
+  auto const x2 = uri::split ("/");
+  EXPECT_EQ (x, x2);
 }
 // NOLINTNEXTLINE
 TEST (RemoveDotSegments, TrailingSlashDotDot) {
   auto x = uri::split ("/bar/..");
   ASSERT_TRUE (x);
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_TRUE (x->path.directory);
   EXPECT_THAT (x->path.segments, ElementsAre ("bar", ".."));
 
   x->path.remove_dot_segments ();
 
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_TRUE (x->path.directory);
-  EXPECT_THAT (x->path.segments, ElementsAre ());
+  EXPECT_THAT (x->path.segments, ElementsAre (""));
+
+  auto const x2 = uri::split ("/");
+  EXPECT_EQ (x, x2);
 }
 // NOLINTNEXTLINE
 TEST (RemoveDotSegments, TwoDirectoriesTrailingSlashDotDot) {
   auto x = uri::split ("/foo/bar/..");
   ASSERT_TRUE (x);
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_TRUE (x->path.directory);
   EXPECT_THAT (x->path.segments, ElementsAre ("foo", "bar", ".."));
 
   x->path.remove_dot_segments ();
 
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_TRUE (x->path.directory);
-  EXPECT_THAT (x->path.segments, ElementsAre ("foo"));
+  EXPECT_THAT (x->path.segments, ElementsAre ("foo", ""));
+
+  auto const x2 = uri::split ("/foo/");
+  EXPECT_EQ (x, x2);
 }
 // NOLINTNEXTLINE
 TEST (RemoveDotSegments, LonelyDot) {
   auto x = uri::split (".");
   ASSERT_TRUE (x);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_TRUE (x->path.directory);
   EXPECT_THAT (x->path.segments, ElementsAre ("."));
 
   x->path.remove_dot_segments ();
 
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_TRUE (x->path.directory);
-  EXPECT_THAT (x->path.segments, ElementsAre ());
+  EXPECT_THAT (x->path.segments, ElementsAre (""));
 }
 // NOLINTNEXTLINE
 TEST (RemoveDotSegments, LonelyDotDot) {
   auto x = uri::split ("..");
   ASSERT_TRUE (x);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_TRUE (x->path.directory);
   EXPECT_THAT (x->path.segments, ElementsAre (".."));
 
   x->path.remove_dot_segments ();
 
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_TRUE (x->path.directory);
-  EXPECT_THAT (x->path.segments, ElementsAre ());
+  EXPECT_THAT (x->path.segments, ElementsAre (""));
 }
 // NOLINTNEXTLINE
 TEST (RemoveDotSegments, LonelyDotDotSlashDot) {
   auto x = uri::split ("../.");
   ASSERT_TRUE (x);
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_TRUE (x->path.directory);
   EXPECT_THAT (x->path.segments, ElementsAre ("..", "."));
 
   x->path.remove_dot_segments ();
 
   EXPECT_FALSE (x->path.absolute);
-  EXPECT_TRUE (x->path.directory);
-  EXPECT_THAT (x->path.segments, ElementsAre ());
+  EXPECT_THAT (x->path.segments, ElementsAre (""));
 }
 
 // NOLINTNEXTLINE
@@ -1539,9 +1449,9 @@ TEST (UriFileSystemPath, AbsoluteTwoSegments) {
 TEST (UriFileSystemPath, AbsoluteTwoSegmentsDirectory) {
   uri::path p;
   p.absolute = true;
-  p.directory = true;
   p.segments.emplace_back ("foo");
   p.segments.emplace_back ("bar");
+  p.segments.emplace_back ();
   EXPECT_EQ (static_cast<std::filesystem::path> (p),
              std::filesystem::path ("/foo/bar/"));
 }
@@ -1556,9 +1466,9 @@ TEST (UriFileSystemPath, RelativeTwoSegments) {
 // NOLINTNEXTLINE
 TEST (UriFileSystemPath, RelativeTwoSegmentsDirectory) {
   uri::path p;
-  p.directory = true;
   p.segments.emplace_back ("foo");
   p.segments.emplace_back ("bar");
+  p.segments.emplace_back ();
   EXPECT_EQ (static_cast<std::filesystem::path> (p),
              std::filesystem::path ("foo/bar/"));
 }
@@ -1600,7 +1510,6 @@ TEST (UriNormalize, SchemeAndHostCase) {
   EXPECT_EQ (x->authority.host, "www.example.com");  // lower-case
   EXPECT_FALSE (x->authority.port);
   EXPECT_TRUE (x->path.absolute);
-  EXPECT_FALSE (x->path.directory);
   EXPECT_THAT (x->path.segments,
                ElementsAre ("Path/A"));   // No dot-segments, Mixed-case.
   EXPECT_EQ (x->query, "Query");          // Mixed-case
@@ -1631,15 +1540,34 @@ TEST_F (Join, Normal) {
   EXPECT_EQ (uri::split ("http://a/b/c/g;x"), uri::join (base_, "g;x"));
   EXPECT_EQ (uri::split ("http://a/b/c/g;x?y#s"), uri::join (base_, "g;x?y#s"));
   EXPECT_EQ (uri::split ("http://a/b/c/d;p?q"), uri::join (base_, ""));
+}
+TEST_F (Join, LonelyDot) {
   EXPECT_EQ (uri::split ("http://a/b/c/"), uri::join (base_, "."));
+}
+TEST_F (Join, DotSlash) {
   EXPECT_EQ (uri::split ("http://a/b/c/"), uri::join (base_, "./"));
+}
+TEST_F (Join, DotDot) {
   EXPECT_EQ (uri::split ("http://a/b/"), uri::join (base_, ".."));
+}
+TEST_F (Join, DotDotSlash) {
   EXPECT_EQ (uri::split ("http://a/b/"), uri::join (base_, "../"));
+}
+TEST_F (Join, DotDotG) {
   EXPECT_EQ (uri::split ("http://a/b/g"), uri::join (base_, "../g"));
-  EXPECT_EQ (uri::split ("http://a/"), uri::join (base_, "../.."));
+}
+TEST_F (Join, 2DotDots) {
+  auto const expected = uri::split ("http://a/");
+  auto const actual = uri::join (base_, "../.."sv);
+  EXPECT_EQ (expected, actual);
+}
+TEST_F (Join, 2DotDotsSlash) {
   EXPECT_EQ (uri::split ("http://a/"), uri::join (base_, "../../"));
+}
+TEST_F (Join, 2DotDotsG) {
   EXPECT_EQ (uri::split ("http://a/g"), uri::join (base_, "../../g"));
 }
+
 // NOLINTNEXTLINE
 TEST_F (Join, Abnormal) {
   // Check that we are careful in handling cases where there are more ".."
