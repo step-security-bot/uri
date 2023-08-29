@@ -445,14 +445,10 @@ auto path_absolute (uri::parts& result) {
     return r.concat (solidus, append_dir<true>{result})
       .optional ([&result] (rule const& r1) {
         return r1.concat (segment_nz, append_segment{result})
-          .concat ([&result] (rule const& r2) {
-            return r2
-              .star ([&result] (rule const& r3) {
-                return r3.concat (solidus, append_dir<false>{result})
-                  .concat (segment, append_segment{result})
-                  .matched ("\"/\" segment", r3);
-              })
-              .matched ("*( \"/\" segment )", r2);
+          .star ([&result] (rule const& r2) {
+            return r2.concat (solidus, append_dir<false>{result})
+              .concat (segment, append_segment{result})
+              .matched ("\"/\" segment", r2);
           })
           .matched ("*( \"/\" segment )", r1);
       })
