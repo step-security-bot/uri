@@ -1,0 +1,12 @@
+#!/bin/bash
+mkdir -p gen
+rm gen/*
+abnfgen -c -n 500 -d gen -s URI-reference uri.abnf
+
+for f in gen/*
+do
+  echo $f
+  ./test.py $f > t1
+  ../build_mac2/tools/uri-split/uri-split $f > t2
+  diff t1 t2
+done | tee out.txt

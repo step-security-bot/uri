@@ -1,8 +1,0 @@
-#!/bin/bash
-for f in gen/*
-do
-  echo $f
-  ./test.py $f > t1
-  ./build_mac2/uri $f > t2
-  diff t1 t2
-done | tee out.txt
