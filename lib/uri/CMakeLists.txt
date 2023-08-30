@@ -14,13 +14,13 @@
 #
 #===----------------------------------------------------------------------===//
 set (include_dir "${URI_ROOT}/include")
-add_library (urilib STATIC
+add_library (uri STATIC
     "${include_dir}/uri/rule.hpp"
     "${include_dir}/uri/uri.hpp"
     rule.cpp
     uri.cpp
 )
-setup_target (urilib)
+setup_target (uri)
 target_include_directories (
-  urilib PUBLIC $<BUILD_INTERFACE:${include_dir}> $<INSTALL_INTERFACE:urilib>
+  uri PUBLIC $<BUILD_INTERFACE:${include_dir}> $<INSTALL_INTERFACE:uri>
 )

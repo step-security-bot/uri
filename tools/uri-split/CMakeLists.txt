@@ -15,7 +15,7 @@
 #===----------------------------------------------------------------------===//
 add_executable (uri-split uri-split.cpp)
 setup_target (uri-split)
-target_link_libraries (uri-split PUBLIC urilib)
+target_link_libraries (uri-split PUBLIC uri)
 
 if (TARGET gtest)
   set (prelink_target uri-split)

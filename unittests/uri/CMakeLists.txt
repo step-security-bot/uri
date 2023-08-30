@@ -1,4 +1,4 @@
-#===- unittests/urilib/CMakeLists.txt -------------------------------------===//
+#===- unittests/uri/CMakeLists.txt ----------------------------------------===//
 #*   ____ __  __       _        _     _     _        *
 #*  / ___|  \/  | __ _| | _____| |   (_)___| |_ ___  *
 #* | |   | |\/| |/ _` | |/ / _ \ |   | / __| __/ __| *
@@ -14,7 +14,7 @@
 #
 #===----------------------------------------------------------------------===//
 add_executable (unittest test_uri.cpp test_rule.cpp)
-target_link_libraries (unittest urilib gmock_main)
+target_link_libraries (unittest uri gmock_main)
 setup_target (unittest)
 set (clang_options -Wno-global-constructors -Wno-used-but-marked-unused)
 set (gcc_options)

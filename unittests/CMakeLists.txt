@@ -13,4 +13,4 @@
 # SPDX-License-Identifier: MIT
 #
 #===----------------------------------------------------------------------===//
-add_subdirectory (urilib)
+add_subdirectory (uri)
