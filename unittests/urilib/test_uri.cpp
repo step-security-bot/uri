@@ -1540,43 +1540,14 @@ TEST_F (Join, Normal) {
   EXPECT_EQ (uri::split ("http://a/b/c/g;x"), uri::join (base_, "g;x"));
   EXPECT_EQ (uri::split ("http://a/b/c/g;x?y#s"), uri::join (base_, "g;x?y#s"));
   EXPECT_EQ (uri::split ("http://a/b/c/d;p?q"), uri::join (base_, ""));
-}
-// NOLINTNEXTLINE
-TEST_F (Join, LonelyDot) {
   EXPECT_EQ (uri::split ("http://a/b/c/"), uri::join (base_, "."));
-}
-// NOLINTNEXTLINE
-TEST_F (Join, DotSlash) {
   EXPECT_EQ (uri::split ("http://a/b/c/"), uri::join (base_, "./"));
-}
-// NOLINTNEXTLINE
-TEST_F (Join, DotDot) {
   EXPECT_EQ (uri::split ("http://a/b/"), uri::join (base_, ".."));
-}
-// NOLINTNEXTLINE
-TEST_F (Join, DotDotSlash) {
   EXPECT_EQ (uri::split ("http://a/b/"), uri::join (base_, "../"));
-}
-// NOLINTNEXTLINE
-TEST_F (Join, DotDotG) {
   EXPECT_EQ (uri::split ("http://a/b/g"), uri::join (base_, "../g"));
-}
-// NOLINTNEXTLINE
-TEST_F (Join, 2DotDots) {
-  auto const expected = uri::split ("http://a/");
-  auto const actual = uri::join (base_, "../.."sv);
-  EXPECT_EQ (expected, actual);
-}
-// NOLINTNEXTLINE
-TEST_F (Join, 2DotDotsSlash) {
+  EXPECT_EQ (uri::split ("http://a/"), uri::join (base_, "../.."sv));
   EXPECT_EQ (uri::split ("http://a/"), uri::join (base_, "../../"));
-}
-// NOLINTNEXTLINE
-TEST_F (Join, 2DotDotsG) {
   EXPECT_EQ (uri::split ("http://a/g"), uri::join (base_, "../../g"));
-}
-// NOLINTNEXTLINE
-TEST_F (Join, BaseWithAuthorityAndNoPath) {
   EXPECT_EQ (uri::split ("file://user@a/g"), uri::join ("file://user@a", "../../g"));
 }
 
@@ -1621,4 +1592,56 @@ TEST_F (Join, Abnormal) {
   // Verify the behviour when the scheme name is present in a relative reference
   // if it is the same as the base URI scheme.
   EXPECT_EQ (uri::split ("http:g"), uri::join (base_, "http:g"));
+}
+
+TEST (UriCompose, Empty) {
+  uri::parts p;
+  EXPECT_EQ (uri::compose (p), "");
+}
+TEST (UriCompose, Scheme) {
+  uri::parts p;
+  p.scheme = "file";
+  EXPECT_EQ (uri::compose (p), "file:");
+}
+TEST (UriCompose, Authority) {
+  uri::parts p;
+  p.authority.userinfo = "username";
+  p.authority.host = "host";
+  p.authority.port = "123";
+  auto const expected = "//username@host:123"sv;
+  EXPECT_EQ (uri::compose (p), expected);
+  EXPECT_EQ (uri::split (expected), p);
+}
+TEST (UriCompose, AbsolutePath) {
+  uri::parts p;
+  p.path.absolute = true;
+  p.path.segments.emplace_back ("a");
+  p.path.segments.emplace_back ("b");
+  p.path.segments.emplace_back ();
+  auto const expected = "/a/b/"sv;
+  EXPECT_EQ (uri::compose (p), expected);
+  EXPECT_EQ (uri::split (expected), p);
+}
+TEST (UriCompose, RelativePath) {
+  uri::parts p;
+  p.path.segments.emplace_back ("a");
+  p.path.segments.emplace_back ("b");
+  p.path.segments.emplace_back ();
+  auto const expected = "a/b/"sv;
+  EXPECT_EQ (uri::compose (p), expected);
+  EXPECT_EQ (uri::split (expected), p);
+}
+TEST (UriCompose, Query) {
+  uri::parts p;
+  p.query = "query";
+  auto const expected = "?query"sv;
+  EXPECT_EQ (uri::compose (p), expected);
+  EXPECT_EQ (uri::split (expected), p);
+}
+TEST (UriCompose, Fragment) {
+  uri::parts p;
+  p.fragment = "fragment";
+  auto const expected = "#fragment"sv;
+  EXPECT_EQ (uri::compose (p), expected);
+  EXPECT_EQ (uri::split (expected), p);
 }
