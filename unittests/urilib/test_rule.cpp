@@ -20,8 +20,12 @@
 
 #include "uri/rule.hpp"
 
-using testing::ElementsAre;
 using namespace std::string_literals;
+
+using testing::ElementsAre;
+using uri::char_range;
+using uri::rule;
+using uri::single_char;
 
 struct Rule : public testing::Test {
   std::vector<std::string> output;

@@ -18,6 +18,8 @@
 #include <iomanip>
 #include <iostream>
 
+namespace uri {
+
 bool rule::done () const {
   if (!tail_ || !tail_->empty ()) {
     return false;
@@ -52,3 +54,5 @@ rule::matched_result rule::matched (char const* name, rule const& in) const {
   }
   return {};
 }
+
+}  // end namespace uri

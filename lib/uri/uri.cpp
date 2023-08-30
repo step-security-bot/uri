@@ -18,6 +18,8 @@
 
 #include <sstream>
 
+using namespace uri;
+
 namespace {
 
 auto single_colon (rule const& r) {

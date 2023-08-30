@@ -94,6 +94,8 @@
 #include <tuple>
 #include <vector>
 
+namespace uri {
+
 class rule {
 public:
   using acceptor_container = std::vector<
@@ -382,5 +384,7 @@ inline auto left_square_bracket (rule const& r) {
 inline auto right_square_bracket (rule const& r) {
   return r.single_char (']');
 }
+
+}  // end namespace uri
 
 #endif  // RULE_HPP
