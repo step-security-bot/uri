@@ -1594,15 +1594,18 @@ TEST_F (Join, Abnormal) {
   EXPECT_EQ (uri::split ("http:g"), uri::join (base_, "http:g"));
 }
 
+// NOLINTNEXTLINE
 TEST (UriCompose, Empty) {
   uri::parts p;
   EXPECT_EQ (uri::compose (p), "");
 }
+// NOLINTNEXTLINE
 TEST (UriCompose, Scheme) {
   uri::parts p;
   p.scheme = "file";
   EXPECT_EQ (uri::compose (p), "file:");
 }
+// NOLINTNEXTLINE
 TEST (UriCompose, Authority) {
   uri::parts p;
   p.authority.userinfo = "username";
@@ -1612,6 +1615,7 @@ TEST (UriCompose, Authority) {
   EXPECT_EQ (uri::compose (p), expected);
   EXPECT_EQ (uri::split (expected), p);
 }
+// NOLINTNEXTLINE
 TEST (UriCompose, AbsolutePath) {
   uri::parts p;
   p.path.absolute = true;
@@ -1622,6 +1626,7 @@ TEST (UriCompose, AbsolutePath) {
   EXPECT_EQ (uri::compose (p), expected);
   EXPECT_EQ (uri::split (expected), p);
 }
+// NOLINTNEXTLINE
 TEST (UriCompose, RelativePath) {
   uri::parts p;
   p.path.segments.emplace_back ("a");
@@ -1631,6 +1636,7 @@ TEST (UriCompose, RelativePath) {
   EXPECT_EQ (uri::compose (p), expected);
   EXPECT_EQ (uri::split (expected), p);
 }
+// NOLINTNEXTLINE
 TEST (UriCompose, Query) {
   uri::parts p;
   p.query = "query";
@@ -1638,6 +1644,7 @@ TEST (UriCompose, Query) {
   EXPECT_EQ (uri::compose (p), expected);
   EXPECT_EQ (uri::split (expected), p);
 }
+// NOLINTNEXTLINE
 TEST (UriCompose, Fragment) {
   uri::parts p;
   p.fragment = "fragment";
