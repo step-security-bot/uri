@@ -79,8 +79,8 @@
 /// stops as soon as one is matched. Care needs to be taken where there is
 /// potential ambiguity between alternative rules.
 
-#ifndef RULE_HPP
-#define RULE_HPP
+#ifndef URI_RULE_HPP
+#define URI_RULE_HPP
 
 #include <algorithm>
 #include <array>
@@ -387,4 +387,4 @@ inline auto right_square_bracket (rule const& r) {
 
 }  // end namespace uri
 
-#endif  // RULE_HPP
+#endif  // URI_RULE_HPP

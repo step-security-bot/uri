@@ -13,8 +13,8 @@
 // SPDX-License-Identifier: MIT
 //
 //===----------------------------------------------------------------------===//
-#ifndef URI_HPP
-#define URI_HPP
+#ifndef URI_URI_HPP
+#define URI_URI_HPP
 
 #include <filesystem>
 #include <optional>
@@ -95,4 +95,4 @@ std::ostream& operator<< (std::ostream& os, parts const& p);
 
 }  // end namespace uri
 
-#endif  // URI_HPP
+#endif  // URI_URI_HPP
