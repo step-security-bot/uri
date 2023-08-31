@@ -489,22 +489,26 @@ auto path_rootless (uri::parts& result) {
   };
 }
 
-// relative-part = "//" authority path-abempty
+// auth-abempty = "//" authority path-abempty
+auto auth_abempty (uri::parts& result) {
+  return [&result] (rule const& r) {
+    return r.concat (solidus)
+      .concat (solidus)
+      .concat (authority (result))
+      .concat (path_abempty (result))
+      .matched ("auth-abempty", r);
+  };
+}
+
+// relative-part = auth-abempty
 //               / path-absolute
 //               / path-noscheme
 //               / path-empty
 auto relative_part (uri::parts& result) {
   return [&result] (rule const& r) {
     return r
-      .alternative (
-        [&result] (rule const& r1) {
-          return r1.concat (solidus)
-            .concat (solidus)
-            .concat (authority (result))
-            .concat (path_abempty (result))
-            .matched (R"("//" authority path-abempty)", r1);
-        },
-        path_absolute (result), path_noscheme (result), path_empty)
+      .alternative (auth_abempty (result), path_absolute (result),
+                    path_noscheme (result), path_empty)
       .matched ("relative-part", r);
   };
 }
@@ -566,22 +570,15 @@ auto relative_ref (uri::parts& result) {
   };
 }
 
-// hier-part     = "//" authority path-abempty
+// hier-part     = auth-abempty
 //               / path-absolute
 //               / path-rootless
 //               / path-empty
 auto hier_part (uri::parts& result) {
   return [&result] (rule const& r) {
     return r
-      .alternative (
-        [&result] (rule const& r1) {
-          return r1.concat (solidus)
-            .concat (solidus)
-            .concat (authority (result))
-            .concat (path_abempty (result))
-            .matched ("\"//\" authority path-abempty", r1);
-        },
-        path_absolute (result), path_rootless (result), path_empty)
+      .alternative (auth_abempty (result), path_absolute (result),
+                    path_rootless (result), path_empty)
       .matched ("hier-part", r);
   };
 }
