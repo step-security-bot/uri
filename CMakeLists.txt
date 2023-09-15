@@ -15,7 +15,16 @@
 #===----------------------------------------------------------------------===//
 cmake_minimum_required (VERSION 3.13)
 project (uri CXX)
+
+option (URI_WERROR "Compiler warnings are errors")
+option (URI_CXX17 "Use C++17 (rather than C++20)" No)
+option (URI_LIBCXX "Use libc++ rather than libstdc++ (clang only)")
+
+if (URI_CXX17)
 set (STANDARD 17)
+else ()
+set (STANDARD 20)
+endif ()
 
 include (CheckCXXCompilerFlag)
 
@@ -65,7 +74,7 @@ function (setup_target target)
     endif ()
   endif ()
 
-  if (WERROR)
+  if (URI_WERROR)
     list (APPEND clang_options -Werror)
     list (APPEND gcc_options -Werror)
     list (APPEND msvc_options /WX)
@@ -75,7 +84,7 @@ function (setup_target target)
     list (APPEND gcc_options -fprofile-arcs -ftest-coverage)
     list (APPEND clang_options -fprofile-instr-generate -fcoverage-mapping)
   endif ()
-  if (LIBCXX)
+  if (URI_LIBCXX)
     list (APPEND clang_options -stdlib=libc++)
   endif ()
 
@@ -133,7 +142,7 @@ function (setup_gtest)
         endif ()
       endif ()
 
-      if (LIBCXX)
+      if (URI_LIBCXX)
         list (APPEND gclang_options -stdlib=libc++)
       endif ()
 
