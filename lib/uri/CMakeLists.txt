@@ -16,6 +16,7 @@
 set (include_dir "${URI_ROOT}/include")
 add_library (uri STATIC
     "${include_dir}/uri/pctdecode.hpp"
+    "${include_dir}/uri/pctencode.hpp"
     "${include_dir}/uri/rule.hpp"
     "${include_dir}/uri/uri.hpp"
     rule.cpp
