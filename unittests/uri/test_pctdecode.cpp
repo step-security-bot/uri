@@ -61,6 +61,7 @@ TEST_P (UriPctDecode, RangesForEach) {
 }
 #endif  // __cpp_lib_ranges
 
+// NOLINTNEXTLINE
 INSTANTIATE_TEST_SUITE_P (
   UriPctDecode, UriPctDecode,
   testing::Values (
