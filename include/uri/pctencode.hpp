@@ -14,16 +14,21 @@ constexpr char dec2hex (unsigned const v) noexcept {
 template <typename InputIterator, typename OutputIterator>
 OutputIterator pctencode (InputIterator first, InputIterator last,
                           OutputIterator out) {
-  static std::u8string const gen_delims = u8":/?#[]@";
-  static std::u8string const sub_delims = u8"!$&'()*+,;=";
+  using value_type = typename std::iterator_traits<InputIterator>::value_type;
+  static std::array<value_type, 18> const delims{{
+    ':', '/', '?', '#', '[', ']', '@',                      // gen-delims
+    '!', '$', '&', '\'', '(', ')', '*', '+', ',', ';', '='  // sub-delims
+  }};
+  auto const begin = std::begin (delims);
+  auto const end = std::end (delims);
 
   for (; first != last; ++first) {
     auto c = *first;
-    if (c > 0x7F || c < 0x20 || gen_delims.find (c) != std::string::npos ||
-        sub_delims.find (c) != std::string::npos) {
+    auto cu = static_cast<std::make_unsigned_t<decltype (c)>> (c);
+    if (cu > 0x7F || cu < 0x20 || std::find (begin, end, c) != end) {
       *(out++) = '%';
-      *(out++) = dec2hex ((c >> 4) & 0xF);
-      c = dec2hex (c & 0xF);
+      *(out++) = dec2hex ((cu >> 4) & 0xF);
+      c = dec2hex (cu & 0xF);
     }
     *(out++) = c;
   }
