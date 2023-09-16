@@ -1,6 +1,7 @@
 #ifndef URI_PCTENCODE_HPP
 #define URI_PCTENCODE_HPP
 
+#include <array>
 #include <cassert>
 #include <string>
 
