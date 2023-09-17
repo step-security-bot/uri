@@ -14,9 +14,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <gmock/gmock.h>
-
 #include "uri/uri.hpp"
+
+// google test
+#include "gmock/gmock.h"
+#if URI_FUZZTEST
+#include "fuzztest/fuzztest.h"
+#endif
 
 using testing::ElementsAre;
 using namespace std::string_view_literals;
@@ -26,7 +30,7 @@ using namespace std::string_view_literals;
 // full coverage" (-c) mode enabled.
 
 // NOLINTNEXTLINE
-TEST (Uri, Empty) {
+TEST (UriSplit, Empty) {
   std::optional<uri::parts> const x = uri::split ("");
   ASSERT_TRUE (x);
   EXPECT_FALSE (x->scheme);
@@ -37,7 +41,7 @@ TEST (Uri, Empty) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, EmptyPathComponents) {
+TEST (UriSplit, EmptyPathComponents) {
   std::optional<uri::parts> const x = uri::split ("/foo///bar");
   ASSERT_TRUE (x);
   EXPECT_FALSE (x->scheme);
@@ -49,7 +53,7 @@ TEST (Uri, EmptyPathComponents) {
 }
 
 // NOLINTNEXTLINE
-TEST (Uri, 0001) {
+TEST (UriSplit, 0001) {
   auto const x = uri::split ("C://[::A:eE5c]:2194/&///@//:_/%aB//.////#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "C");
@@ -66,7 +70,7 @@ TEST (Uri, 0001) {
              "/&/@/:_/%aB/./");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0002) {
+TEST (UriSplit, 0002) {
   auto const x = uri::split ("P-.:/?/?");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "P-.");
@@ -77,7 +81,7 @@ TEST (Uri, 0002) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0003) {
+TEST (UriSplit, 0003) {
   auto const x = uri::split ("i+V:?");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "i+V");
@@ -88,7 +92,7 @@ TEST (Uri, 0003) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0004) {
+TEST (UriSplit, 0004) {
   auto const x = uri::split ("L:%Cf#%dD/?H");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "L");
@@ -102,7 +106,7 @@ TEST (Uri, 0004) {
              "%Cf");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0005) {
+TEST (UriSplit, 0005) {
   auto const x = uri::split ("E07:/8=-~%bF//%36////'/%16N%78//)/%53/;?*!");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "E07");
@@ -115,7 +119,7 @@ TEST (Uri, 0005) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0006) {
+TEST (UriSplit, 0006) {
   auto const x = uri::split ("v:");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "v");
@@ -126,7 +130,7 @@ TEST (Uri, 0006) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0007) {
+TEST (UriSplit, 0007) {
   auto const x = uri::split ("YXa:/#B");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "YXa");
@@ -137,7 +141,7 @@ TEST (Uri, 0007) {
   EXPECT_EQ (x->fragment, "B");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0008) {
+TEST (UriSplit, 0008) {
   auto const x = uri::split ("n:/,+?$#(+!)D");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "n");
@@ -148,7 +152,7 @@ TEST (Uri, 0008) {
   EXPECT_EQ (x->fragment, "(+!)D");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0009) {
+TEST (UriSplit, 0009) {
   auto const x = uri::split ("m:/?cJ");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "m");
@@ -159,7 +163,7 @@ TEST (Uri, 0009) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0010) {
+TEST (UriSplit, 0010) {
   auto const x = uri::split ("zR:d/M/kx/s/GTl///SgA/?#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "zR");
@@ -171,7 +175,7 @@ TEST (Uri, 0010) {
   EXPECT_EQ (x->fragment, "");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0011) {
+TEST (UriSplit, 0011) {
   auto const x = uri::split ("t:W?p#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "t");
@@ -182,7 +186,7 @@ TEST (Uri, 0011) {
   EXPECT_EQ (x->fragment, "");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0012) {
+TEST (UriSplit, 0012) {
   auto const x = uri::split ("QrIq:/#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "QrIq");
@@ -193,7 +197,7 @@ TEST (Uri, 0012) {
   EXPECT_EQ (x->fragment, "");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0013) {
+TEST (UriSplit, 0013) {
   auto const x = uri::split ("OuU:/?bZK");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "OuU");
@@ -204,7 +208,7 @@ TEST (Uri, 0013) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0014) {
+TEST (UriSplit, 0014) {
   auto const x = uri::split ("Fjfe:?h");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "Fjfe");
@@ -215,7 +219,7 @@ TEST (Uri, 0014) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0015) {
+TEST (UriSplit, 0015) {
   auto const x = uri::split ("y:w/o/b/?lKTF");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "y");
@@ -226,7 +230,7 @@ TEST (Uri, 0015) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0016) {
+TEST (UriSplit, 0016) {
   auto const x = uri::split ("P://=:_%bb%Cf%2F-8;~@230.109.31.250#.");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "P");
@@ -239,7 +243,7 @@ TEST (Uri, 0016) {
   EXPECT_EQ (x->fragment, ".");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0017) {
+TEST (UriSplit, 0017) {
   auto const x = uri::split ("N://@=i%bD%Cb&*%Ea)%CE//:%cA//#?//");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "N");
@@ -254,7 +258,7 @@ TEST (Uri, 0017) {
   EXPECT_EQ (static_cast<std::filesystem::path> (x->path), "/:%cA/");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0018) {
+TEST (UriSplit, 0018) {
   auto const x = uri::split ("X:#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "X");
@@ -265,7 +269,7 @@ TEST (Uri, 0018) {
   EXPECT_EQ (x->fragment, "");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0019) {
+TEST (UriSplit, 0019) {
   auto const x = uri::split ("U:??");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "U");
@@ -276,7 +280,7 @@ TEST (Uri, 0019) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0020) {
+TEST (UriSplit, 0020) {
   auto const x = uri::split ("G:");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "G");
@@ -287,7 +291,7 @@ TEST (Uri, 0020) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0021) {
+TEST (UriSplit, 0021) {
   auto const x = uri::split ("l6+:?#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "l6+");
@@ -298,7 +302,7 @@ TEST (Uri, 0021) {
   EXPECT_EQ (x->fragment, "");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0022) {
+TEST (UriSplit, 0022) {
   auto const x = uri::split ("T.-://:@[VD.~]:?/@#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "T.-");
@@ -311,7 +315,7 @@ TEST (Uri, 0022) {
   EXPECT_EQ (x->fragment, "");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0023) {
+TEST (UriSplit, 0023) {
   auto const x = uri::split ("rC://3.76.206.5:8966?/");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "rC");
@@ -324,7 +328,7 @@ TEST (Uri, 0023) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0024) {
+TEST (UriSplit, 0024) {
   auto const x = uri::split ("oNP:///::");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "oNP");
@@ -337,7 +341,7 @@ TEST (Uri, 0024) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0025) {
+TEST (UriSplit, 0025) {
   auto const x = uri::split ("g0:?#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "g0");
@@ -348,7 +352,7 @@ TEST (Uri, 0025) {
   EXPECT_EQ (x->fragment, "");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0026) {
+TEST (UriSplit, 0026) {
   auto const x = uri::split ("Do1-:");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "Do1-");
@@ -359,7 +363,7 @@ TEST (Uri, 0026) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0027) {
+TEST (UriSplit, 0027) {
   auto const x = uri::split ("K:?");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "K");
@@ -370,7 +374,7 @@ TEST (Uri, 0027) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0028) {
+TEST (UriSplit, 0028) {
   auto const x = uri::split ("tc://@[::F]:/::@~?@/");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "tc");
@@ -383,7 +387,7 @@ TEST (Uri, 0028) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0029) {
+TEST (UriSplit, 0029) {
   auto const x = uri::split ("N:#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "N");
@@ -394,7 +398,7 @@ TEST (Uri, 0029) {
   EXPECT_EQ (x->fragment, "");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0030) {
+TEST (UriSplit, 0030) {
   auto const x = uri::split ("o:");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "o");
@@ -405,7 +409,7 @@ TEST (Uri, 0030) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0031) {
+TEST (UriSplit, 0031) {
   auto const x = uri::split (R"(k-0+:???/)");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "k-0+");
@@ -416,7 +420,7 @@ TEST (Uri, 0031) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0032) {
+TEST (UriSplit, 0032) {
   auto const x = uri::split (R"(y://%DD@253.216.255.251//aa/??/://;)");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "y");
@@ -431,7 +435,7 @@ TEST (Uri, 0032) {
   EXPECT_EQ (static_cast<std::filesystem::path> (x->path), "/aa/");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0033) {
+TEST (UriSplit, 0033) {
   auto const x = uri::split ("B://.@[AC::1:6DEb:14.97.229.249]:?/#??~(");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "B");
@@ -444,7 +448,7 @@ TEST (Uri, 0033) {
   EXPECT_EQ (x->fragment, "??~(");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0034) {
+TEST (UriSplit, 0034) {
   auto const x = uri::split ("p://@26.254.86.252://aa");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "p");
@@ -459,7 +463,7 @@ TEST (Uri, 0034) {
   EXPECT_EQ (static_cast<std::filesystem::path> (x->path), "/aa");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0035) {
+TEST (UriSplit, 0035) {
   auto const x = uri::split ("P+-n:#/%f0");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "P+-n");
@@ -470,7 +474,7 @@ TEST (Uri, 0035) {
   EXPECT_EQ (x->fragment, "/%f0");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0036) {
+TEST (UriSplit, 0036) {
   auto const x = uri::split ("u:?");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "u");
@@ -481,7 +485,7 @@ TEST (Uri, 0036) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0037) {
+TEST (UriSplit, 0037) {
   auto const x = uri::split ("U://%Aa:@[::b:E:A:53.48.69.41]?");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "U");
@@ -494,7 +498,7 @@ TEST (Uri, 0037) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0038) {
+TEST (UriSplit, 0038) {
   auto const x = uri::split ("h.P+9:?:#?");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "h.P+9");
@@ -505,7 +509,7 @@ TEST (Uri, 0038) {
   EXPECT_EQ (x->fragment, "?");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0039) {
+TEST (UriSplit, 0039) {
   auto const x = uri::split ("x:??#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "x");
@@ -516,7 +520,7 @@ TEST (Uri, 0039) {
   EXPECT_EQ (x->fragment, "");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0040) {
+TEST (UriSplit, 0040) {
   auto const x = uri::split ("A:#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "A");
@@ -527,7 +531,7 @@ TEST (Uri, 0040) {
   EXPECT_EQ (x->fragment, "");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0041) {
+TEST (UriSplit, 0041) {
   auto const x = uri::split ("Lp.:?#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "Lp.");
@@ -538,7 +542,7 @@ TEST (Uri, 0041) {
   EXPECT_EQ (x->fragment, "");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0042) {
+TEST (UriSplit, 0042) {
   auto const x = uri::split ("d-:#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "d-");
@@ -549,7 +553,7 @@ TEST (Uri, 0042) {
   EXPECT_EQ (x->fragment, "");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0043) {
+TEST (UriSplit, 0043) {
   auto const x = uri::split ("h-.:?/?/#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "h-.");
@@ -560,7 +564,7 @@ TEST (Uri, 0043) {
   EXPECT_EQ (x->fragment, "");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0044) {
+TEST (UriSplit, 0044) {
   auto const x = uri::split ("d:");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "d");
@@ -571,7 +575,7 @@ TEST (Uri, 0044) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0045) {
+TEST (UriSplit, 0045) {
   auto const x = uri::split ("L:");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "L");
@@ -582,7 +586,7 @@ TEST (Uri, 0045) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0046) {
+TEST (UriSplit, 0046) {
   auto const x = uri::split ("Z5://@[9:BB:8:DAc:BbAA:E:a::]?#@$");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "Z5");
@@ -595,7 +599,7 @@ TEST (Uri, 0046) {
   EXPECT_EQ (x->fragment, "@$");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0047) {
+TEST (UriSplit, 0047) {
   auto const x = uri::split ("C-://[::1E:BB:a:5c1:Dd:40.44.228.108]/;?#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "C-");
@@ -608,7 +612,7 @@ TEST (Uri, 0047) {
   EXPECT_EQ (x->fragment, "");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0048) {
+TEST (UriSplit, 0048) {
   auto const x = uri::split ("z://[c:BC:b:A:Bd:D:dC1f:cedB]?/#/:/%FA");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "z");
@@ -621,7 +625,7 @@ TEST (Uri, 0048) {
   EXPECT_EQ (x->fragment, "/:/%FA");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0049) {
+TEST (UriSplit, 0049) {
   auto const x = uri::split ("x.2:#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "x.2");
@@ -632,7 +636,7 @@ TEST (Uri, 0049) {
   EXPECT_EQ (x->fragment, "");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0050) {
+TEST (UriSplit, 0050) {
   auto const x = uri::split ("p://@[::F:e:4b:eCBE:f:c]");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "p");
@@ -645,7 +649,7 @@ TEST (Uri, 0050) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0051) {
+TEST (UriSplit, 0051) {
   auto const x = uri::split ("tmi://[e:C:Aa:eD::FDfD:b:F]:?");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "tmi");
@@ -658,7 +662,7 @@ TEST (Uri, 0051) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0052) {
+TEST (UriSplit, 0052) {
   auto const x = uri::split ("G+:");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "G+");
@@ -669,7 +673,7 @@ TEST (Uri, 0052) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0053) {
+TEST (UriSplit, 0053) {
   auto const x = uri::split ("A://[vA5.+:=.p~=)=&_;-=7)(.;]:768295/+");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "A");
@@ -682,7 +686,7 @@ TEST (Uri, 0053) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0054) {
+TEST (UriSplit, 0054) {
   auto const x = uri::split ("n+://[::]:9831#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "n+");
@@ -695,7 +699,7 @@ TEST (Uri, 0054) {
   EXPECT_EQ (x->fragment, "");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0055) {
+TEST (UriSplit, 0055) {
   auto const x = uri::split ("v-2e.l:?:????:/");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "v-2e.l");
@@ -706,7 +710,7 @@ TEST (Uri, 0055) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0056) {
+TEST (UriSplit, 0056) {
   auto const x = uri::split ("ka+://6.@[F::219.226.254.253]:900/'R#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "ka+");
@@ -719,7 +723,7 @@ TEST (Uri, 0056) {
   EXPECT_EQ (x->fragment, "");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0057) {
+TEST (UriSplit, 0057) {
   auto const x = uri::split ("P://[daf::B:7:e:b:D:F]:730");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "P");
@@ -732,7 +736,7 @@ TEST (Uri, 0057) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0058) {
+TEST (UriSplit, 0058) {
   auto const x = uri::split ("H://-!:_%Bd@[::]:7");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "H");
@@ -745,7 +749,7 @@ TEST (Uri, 0058) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0059) {
+TEST (UriSplit, 0059) {
   auto const x = uri::split ("u+://;@[::dFC:d:6:d]://#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "u+");
@@ -760,7 +764,7 @@ TEST (Uri, 0059) {
   EXPECT_EQ (static_cast<std::filesystem::path> (x->path), "/");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0060) {
+TEST (UriSplit, 0060) {
   auto const x = uri::split ("D://[dCDa:c:e:B:F::D:a]:/%Dc");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "D");
@@ -773,7 +777,7 @@ TEST (Uri, 0060) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0061) {
+TEST (UriSplit, 0061) {
   auto const x = uri::split ("mF2:");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "mF2");
@@ -784,7 +788,7 @@ TEST (Uri, 0061) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0062) {
+TEST (UriSplit, 0062) {
   auto const x = uri::split ("f.://[d1b:CF:AbBa::F:d:11.246.155.253]?");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "f.");
@@ -797,7 +801,7 @@ TEST (Uri, 0062) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0063) {
+TEST (UriSplit, 0063) {
   auto const x = uri::split ("f5++://@[7d::6:df:f:245.95.78.9]:??");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "f5++");
@@ -810,7 +814,7 @@ TEST (Uri, 0063) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0064) {
+TEST (UriSplit, 0064) {
   auto const x = uri::split ("c.l://[::bba:B:6:1.255.161.3]:#?/");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "c.l");
@@ -823,7 +827,7 @@ TEST (Uri, 0064) {
   EXPECT_EQ (x->fragment, "?/");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0065) {
+TEST (UriSplit, 0065) {
   auto const x = uri::split ("T://[fdF::f2]");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "T");
@@ -836,7 +840,7 @@ TEST (Uri, 0065) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0066) {
+TEST (UriSplit, 0066) {
   auto const x = uri::split ("U-92.://[::A:C:c]/");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "U-92.");
@@ -851,7 +855,7 @@ TEST (Uri, 0066) {
   EXPECT_EQ (static_cast<std::filesystem::path> (x->path), "/");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0067) {
+TEST (UriSplit, 0067) {
   auto const x = uri::split ("K:?#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "K");
@@ -862,7 +866,7 @@ TEST (Uri, 0067) {
   EXPECT_EQ (x->fragment, "");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0068) {
+TEST (UriSplit, 0068) {
   auto const x = uri::split ("l.://[c:CEa:cd1B:f:f:D::ef]?#%bC@/:");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "l.");
@@ -875,7 +879,7 @@ TEST (Uri, 0068) {
   EXPECT_EQ (x->fragment, "%bC@/:");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0069) {
+TEST (UriSplit, 0069) {
   auto const x =
     uri::split (R"(v+://@[::C:dEd:4:218.255.251.5]:8/@.;J??Q??%48/#)");
   ASSERT_TRUE (x);
@@ -889,7 +893,7 @@ TEST (Uri, 0069) {
   EXPECT_EQ (x->fragment, "");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0070) {
+TEST (UriSplit, 0070) {
   auto const x = uri::split ("I:?#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "I");
@@ -900,7 +904,7 @@ TEST (Uri, 0070) {
   EXPECT_EQ (x->fragment, "");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0071) {
+TEST (UriSplit, 0071) {
   auto const x = uri::split ("t.+://[::Ec:AcA:9a]:92/%8a/#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "t.+");
@@ -915,7 +919,7 @@ TEST (Uri, 0071) {
   EXPECT_EQ (static_cast<std::filesystem::path> (x->path), "/%8a/");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0072) {
+TEST (UriSplit, 0072) {
   auto const x = uri::split ("N+:?~");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "N+");
@@ -926,7 +930,7 @@ TEST (Uri, 0072) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0073) {
+TEST (UriSplit, 0073) {
   auto const x = uri::split ("B:?/.#?");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "B");
@@ -937,7 +941,7 @@ TEST (Uri, 0073) {
   EXPECT_EQ (x->fragment, "?");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0074) {
+TEST (UriSplit, 0074) {
   auto const x = uri::split ("u8K.://.(@[d::Baa:dE:D]#/");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "u8K.");
@@ -950,7 +954,7 @@ TEST (Uri, 0074) {
   EXPECT_EQ (x->fragment, "/");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0075) {
+TEST (UriSplit, 0075) {
   auto const x = uri::split ("E+.://@[::F:ab79:B:fa:C]#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "E+.");
@@ -963,7 +967,7 @@ TEST (Uri, 0075) {
   EXPECT_EQ (x->fragment, "");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0076) {
+TEST (UriSplit, 0076) {
   auto const x = uri::split ("S+://[::BBc:d0:EA:3.67.149.137]:/?#/");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "S+");
@@ -979,7 +983,7 @@ TEST (Uri, 0076) {
   EXPECT_EQ (static_cast<std::filesystem::path> (x->path), "/");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0077) {
+TEST (UriSplit, 0077) {
   auto const x = uri::split (R"(Y://[4Bbc:bb::cDcd:5:c4:e:B1]:/%CA@/./??)");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "Y");
@@ -995,7 +999,7 @@ TEST (Uri, 0077) {
   EXPECT_EQ (static_cast<std::filesystem::path> (x->path), "/%CA@/./");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0078) {
+TEST (UriSplit, 0078) {
   auto const x = uri::split ("W.-://[CF::]://!?");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "W.-");
@@ -1011,7 +1015,7 @@ TEST (Uri, 0078) {
   EXPECT_EQ (static_cast<std::filesystem::path> (x->path), "/!");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0079) {
+TEST (UriSplit, 0079) {
   auto const x = uri::split ("SF6:#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "SF6");
@@ -1022,7 +1026,7 @@ TEST (Uri, 0079) {
   EXPECT_EQ (x->fragment, "");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0080) {
+TEST (UriSplit, 0080) {
   auto const x = uri::split (R"(R:?????////???/////#??@?_:?)");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "R");
@@ -1033,7 +1037,7 @@ TEST (Uri, 0080) {
   EXPECT_EQ (x->fragment, "??@?_:?");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0081) {
+TEST (UriSplit, 0081) {
   auto const x = uri::split ("g:");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "g");
@@ -1044,7 +1048,7 @@ TEST (Uri, 0081) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0082) {
+TEST (UriSplit, 0082) {
   auto const x = uri::split (R"(D-ir+.PA:??#)");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "D-ir+.PA");
@@ -1055,7 +1059,7 @@ TEST (Uri, 0082) {
   EXPECT_EQ (x->fragment, "");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0083) {
+TEST (UriSplit, 0083) {
   auto const x = uri::split ("Z-.-:");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "Z-.-");
@@ -1066,7 +1070,7 @@ TEST (Uri, 0083) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0084) {
+TEST (UriSplit, 0084) {
   auto const x = uri::split ("y-:");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "y-");
@@ -1077,7 +1081,7 @@ TEST (Uri, 0084) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0085) {
+TEST (UriSplit, 0085) {
   auto const x = uri::split ("p:?");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "p");
@@ -1088,7 +1092,7 @@ TEST (Uri, 0085) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0086) {
+TEST (UriSplit, 0086) {
   auto const x = uri::split ("M:#*.");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "M");
@@ -1099,7 +1103,7 @@ TEST (Uri, 0086) {
   EXPECT_EQ (x->fragment, "*.");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0087) {
+TEST (UriSplit, 0087) {
   auto const x = uri::split ("I:?%ab#/.");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "I");
@@ -1110,7 +1114,7 @@ TEST (Uri, 0087) {
   EXPECT_EQ (x->fragment, "/.");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0088) {
+TEST (UriSplit, 0088) {
   auto const x = uri::split ("v6:#:?");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "v6");
@@ -1121,7 +1125,7 @@ TEST (Uri, 0088) {
   EXPECT_EQ (x->fragment, ":?");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0089) {
+TEST (UriSplit, 0089) {
   auto const x = uri::split ("D:#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "D");
@@ -1132,7 +1136,7 @@ TEST (Uri, 0089) {
   EXPECT_EQ (x->fragment, "");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0090) {
+TEST (UriSplit, 0090) {
   auto const x = uri::split ("e.:#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "e.");
@@ -1143,7 +1147,7 @@ TEST (Uri, 0090) {
   EXPECT_EQ (x->fragment, "");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0091) {
+TEST (UriSplit, 0091) {
   auto const x = uri::split ("L:?#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "L");
@@ -1154,7 +1158,7 @@ TEST (Uri, 0091) {
   EXPECT_EQ (x->fragment, "");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0092) {
+TEST (UriSplit, 0092) {
   auto const x = uri::split ("g-:#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "g-");
@@ -1165,7 +1169,7 @@ TEST (Uri, 0092) {
   EXPECT_EQ (x->fragment, "");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0093) {
+TEST (UriSplit, 0093) {
   auto const x = uri::split ("H:");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "H");
@@ -1176,7 +1180,7 @@ TEST (Uri, 0093) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0094) {
+TEST (UriSplit, 0094) {
   auto const x = uri::split (R"(K:??)");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "K");
@@ -1187,7 +1191,7 @@ TEST (Uri, 0094) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0095) {
+TEST (UriSplit, 0095) {
   auto const x = uri::split (R"(c-:?#)");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "c-");
@@ -1198,7 +1202,7 @@ TEST (Uri, 0095) {
   EXPECT_EQ (x->fragment, "");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0096) {
+TEST (UriSplit, 0096) {
   auto const x = uri::split ("Bw:?");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "Bw");
@@ -1209,7 +1213,7 @@ TEST (Uri, 0096) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0097) {
+TEST (UriSplit, 0097) {
   auto const x = uri::split ("hC:?");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "hC");
@@ -1220,7 +1224,7 @@ TEST (Uri, 0097) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0098) {
+TEST (UriSplit, 0098) {
   auto const x = uri::split ("q:?/#/");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "q");
@@ -1231,7 +1235,7 @@ TEST (Uri, 0098) {
   EXPECT_EQ (x->fragment, "/");
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0099) {
+TEST (UriSplit, 0099) {
   auto const x = uri::split ("L:");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "L");
@@ -1242,7 +1246,7 @@ TEST (Uri, 0099) {
   EXPECT_FALSE (x->fragment);
 }
 // NOLINTNEXTLINE
-TEST (Uri, 0100) {
+TEST (UriSplit, 0100) {
   auto const x = uri::split ("W-:?");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "W-");
@@ -1252,6 +1256,13 @@ TEST (Uri, 0100) {
   EXPECT_EQ (x->query, "");
   EXPECT_FALSE (x->fragment);
 }
+
+#if URI_FUZZTEST
+static void UriSplitNeverCrashes (std::string const& input) {
+  uri::split (input);
+}
+FUZZ_TEST (UriSplitFuzz, UriSplitNeverCrashes);
+#endif  // URI_FUZZTEST
 
 // NOLINTNEXTLINE
 TEST (RemoveDotSegments, LeadingDotDotSlash) {

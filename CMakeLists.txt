@@ -37,7 +37,6 @@ function (setup_target target)
 
   set (
     clang_options
-    -fsanitize=undefined
     -Weverything
     -Wno-c++14-extensions
     -Wno-c++98-compat
@@ -47,7 +46,7 @@ function (setup_target target)
     -Wno-padded
     -Wno-undef
     -Wno-weak-vtables
-  )
+    )
   set (gcc_options -Wall -Wextra -pedantic -Wno-maybe-uninitialized)
   set (
     msvc_options
