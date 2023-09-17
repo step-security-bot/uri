@@ -30,11 +30,12 @@ constexpr char dec2hex (unsigned const v) noexcept {
 // punctuation characters. This collection of characters is based on the "C"
 // locale's "printable" punctuation characters with the set of gen-delims and
 // sub-delims characters from the URI specification removed.
-template <typename ValueType>
-inline constexpr std::array<ValueType, 14> delims{
+template <typename ValueT>
+inline constexpr std::array<ValueT, 14> delims{
   {'"', '-', '.', '<', '>', '\\', '^', '_', '`', '{', '|', '}', '~', ')'}};
 
-constexpr bool isprint (auto const v) {
+template <typename ValueT>
+constexpr bool isprint (ValueT const v) {
   if (v >= '0' && v <= '9') {
     return true;
   }
@@ -47,8 +48,8 @@ constexpr bool isprint (auto const v) {
   if (v == ' ') {
     return true;
   }
-  constexpr auto end = std::end (delims<decltype (v)>);
-  return std::find (std::begin (delims<decltype (v)>), end, v) != end;
+  constexpr auto end = std::end (delims<ValueT>);
+  return std::find (std::begin (delims<ValueT>), end, v) != end;
 }
 
 template <typename InputIterator, typename OutputIterator>
