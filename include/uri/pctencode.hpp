@@ -58,7 +58,6 @@ OutputIterator pctencode (InputIterator first, InputIterator last,
   for (; first != last; ++first) {
     auto c = *first;
     if (!isprint (c)) {
-    } else {
       auto const cu = static_cast<std::make_unsigned_t<decltype (c)>> (c);
       *(out++) = '%';
       *(out++) = dec2hex ((cu >> 4) & 0xF);
