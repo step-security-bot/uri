@@ -13,11 +13,15 @@
 // SPDX-License-Identifier: MIT
 //
 //===----------------------------------------------------------------------===//
-#include <gmock/gmock.h>
+#include "uri/pctdecode.hpp"
+
+// google test/fuzz.
+#include "gmock/gmock.h"
+#if URI_FUZZTEST
+#include "fuzztest/fuzztest.h"
+#endif
 
 #include <tuple>
-
-#include "uri/pctdecode.hpp"
 
 using namespace std::string_view_literals;
 
@@ -75,3 +79,23 @@ INSTANTIATE_TEST_SUITE_P (
     std::make_tuple ("ab%qq"sv, "ab%qq"sv),  // percent then no hex
     std::make_tuple ("ab%1q"sv, "ab%1q"sv)   // percent then one hex
     ));
+
+#if URI_FUZZTEST
+static void PctDecodeNeverCrashes (std::string const& input) {
+  std::string out;
+  std::copy (uri::pctdecode_begin (input), uri::pctdecode_end (input),
+             std::back_inserter (out));
+}
+FUZZ_TEST (PctDecodeFuzz, PctDecodeNeverCrashes);
+
+#if defined(__cpp_lib_ranges) && __cpp_lib_ranges >= 201811L
+static void PctDecodeViewNeverCrashes (std::string const& input) {
+  std::string out;
+  auto r = input | uri::views::pctdecode;
+  std::ranges::copy (r, std::back_inserter (out));
+}
+FUZZ_TEST (PctDecodeFuzz, PctDecodeViewNeverCrashes);
+
+#endif  // __cpp_lib_ranges
+
+#endif  // URI_FUZZTEST

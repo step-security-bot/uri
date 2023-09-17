@@ -13,18 +13,23 @@
 # SPDX-License-Identifier: MIT
 #
 #===----------------------------------------------------------------------===//
-cmake_minimum_required (VERSION 3.13)
+cmake_minimum_required (VERSION 3.19)
 project (uri CXX)
 
-option (URI_WERROR "Compiler warnings are errors")
 option (URI_CXX17 "Use C++17 (rather than C++20)" No)
-option (URI_LIBCXX "Use libc++ rather than libstdc++ (clang only)")
+option (URI_FUZZTEST "Enable FuzzTest")
+option (URI_LIBCXX "Use libc++ rather than libstdc++")
+option (URI_WERROR "Compiler warnings are errors")
 
 if (URI_CXX17)
-set (STANDARD 17)
+  set (STANDARD 17)
 else ()
-set (STANDARD 20)
+  set (STANDARD 20)
 endif ()
+
+if (URI_LIBCXX)
+  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+endif (URI_LIBCXX)
 
 include (CheckCXXCompilerFlag)
 
@@ -32,7 +37,6 @@ function (setup_target target)
 
   set (
     clang_options
-    -fsanitize=undefined
     -Weverything
     -Wno-c++14-extensions
     -Wno-c++98-compat
@@ -42,7 +46,7 @@ function (setup_target target)
     -Wno-padded
     -Wno-undef
     -Wno-weak-vtables
-  )
+    )
   set (gcc_options -Wall -Wextra -pedantic -Wno-maybe-uninitialized)
   set (
     msvc_options
@@ -84,9 +88,6 @@ function (setup_target target)
     list (APPEND gcc_options -fprofile-arcs -ftest-coverage)
     list (APPEND clang_options -fprofile-instr-generate -fcoverage-mapping)
   endif ()
-  if (URI_LIBCXX)
-    list (APPEND clang_options -stdlib=libc++)
-  endif ()
 
   set_target_properties (
     ${target}
@@ -109,6 +110,11 @@ function (setup_target target)
     $<$<CXX_COMPILER_ID:GNU>:${gcc_options}>
     $<$<CXX_COMPILER_ID:MSVC>:>
   )
+  if (URI_FUZZTEST)
+    target_compile_definitions (${target} PUBLIC URI_FUZZTEST=1)
+  else()
+    target_compile_definitions (${target} PUBLIC URI_FUZZTEST=0)
+  endif ()
 
 endfunction (setup_target)
 
@@ -142,10 +148,6 @@ function (setup_gtest)
         endif ()
       endif ()
 
-      if (URI_LIBCXX)
-        list (APPEND gclang_options -stdlib=libc++)
-      endif ()
-
       target_compile_definitions (
         ${target} PUBLIC GTEST_REMOVE_LEGACY_TEST_CASEAPI_=1
       )
@@ -165,10 +167,26 @@ function (setup_gtest)
 endfunction (setup_gtest)
 
 
+
 set (URI_ROOT "${CMAKE_CURRENT_SOURCE_DIR}")
 add_subdirectory (lib)
-setup_gtest ()
+
+
+if (URI_FUZZTEST)
+  include(FetchContent)
+  set(FUZZTEST_REPO_BRANCH "main" CACHE STRING "FuzzTest repository branch.")
+  message("Building fuzztest at branch " ${FUZZTEST_REPO_BRANCH})
+  FetchContent_Declare(fuzztest GIT_REPOSITORY https://github.com/google/fuzztest.git GIT_TAG ${FUZZTEST_REPO_BRANCH})
+  FetchContent_MakeAvailable(fuzztest)
+  enable_testing()
+  include(GoogleTest)
+  fuzztest_setup_fuzzing_flags()
+else ()
+  setup_gtest ()
+endif (URI_FUZZTEST)
+
 if (TARGET gtest)
   add_subdirectory (unittests)
 endif ()
+
 add_subdirectory (tools)

@@ -19,7 +19,8 @@ add_executable (unittest
   test_rule.cpp
   test_uri.cpp
 )
-target_link_libraries (unittest uri gtest gmock gmock_main)
+target_link_libraries (unittest PUBLIC uri)
+
 setup_target (unittest)
 set (clang_options -Wno-global-constructors -Wno-used-but-marked-unused)
 set (gcc_options)
@@ -31,3 +32,10 @@ target_compile_options (
     $<$<CXX_COMPILER_ID:GNU>:${gcc_options}>
     $<$<CXX_COMPILER_ID:MSVC>:${msvc_options}>
 )
+
+if (URI_FUZZTEST)
+  link_fuzztest(unittest)
+  gtest_discover_tests (unittest)
+else ()
+  target_link_libraries (unittest PUBLIC gtest gmock gmock_main)
+endif (URI_FUZZTEST)
