@@ -19,13 +19,14 @@
 #include <filesystem>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace uri {
 
 struct path {
   bool absolute = false;
-  std::vector<std::string> segments;
+  std::vector<std::string_view> segments;
 
   constexpr bool operator== (path const& rhs) const {
     return absolute == rhs.absolute && segments == rhs.segments;
@@ -44,9 +45,9 @@ struct path {
 };
 
 struct authority {
-  std::optional<std::string> userinfo;
-  std::optional<std::string> host;
-  std::optional<std::string> port;
+  std::optional<std::string_view> userinfo;
+  std::optional<std::string_view> host;
+  std::optional<std::string_view> port;
 
   constexpr explicit operator bool () const { return userinfo || host || port; }
   constexpr bool operator== (authority const& rhs) const {
@@ -60,11 +61,11 @@ struct authority {
 std::ostream& operator<< (std::ostream& os, authority const& auth);
 
 struct parts {
-  std::optional<std::string> scheme;
+  std::optional<std::string_view> scheme;
   struct authority authority;
   struct path path;
-  std::optional<std::string> query;
-  std::optional<std::string> fragment;
+  std::optional<std::string_view> query;
+  std::optional<std::string_view> fragment;
 
   constexpr bool operator== (parts const& rhs) const {
     return scheme == rhs.scheme && authority == rhs.authority &&

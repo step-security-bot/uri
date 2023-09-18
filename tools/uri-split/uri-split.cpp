@@ -32,8 +32,8 @@ bool read_stream (std::istream& is) {
     if (!r) {
       return false;
     }
-    auto value_or_none = [] (std::optional<std::string> const& s) {
-      return s ? "\""s + s.value () + "\""s : "None"s;
+    auto value_or_none = [] (std::optional<std::string_view> const& s) {
+      return s ? "\""s + std::string{s.value ()} + "\""s : "None"s;
     };
     std::cout << " scheme: " << value_or_none (r->scheme)
               << "\n userinfo: " << value_or_none (r->authority.userinfo)

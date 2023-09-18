@@ -760,7 +760,7 @@ std::ostream& operator<< (std::ostream& os, authority const& auth) {
 parts join (parts const& base, parts const& reference, bool strict) {
   // In "non-strict" mode we ignore a scheme in the reference if it is identical
   // to the base URI's scheme.
-  std::optional<std::string> empty;
+  std::optional<std::string_view> empty;
   auto const * ref_scheme = &reference.scheme;
   if (!strict && reference.scheme == base.scheme) {
     ref_scheme = &empty;
