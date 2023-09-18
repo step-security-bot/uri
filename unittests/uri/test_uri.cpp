@@ -1562,6 +1562,14 @@ TEST_F (Join, Abnormal) {
   EXPECT_EQ (uri::split ("http:g"), uri::join (base_, "http:g"));
 }
 
+#if URI_FUZZTEST
+static void UriJoinNeverCrashes (uri::parts const& base,
+                                 uri::parts const& reference, bool strict) {
+  uri::join (base, reference, strict);
+}
+FUZZ_TEST (UriJoinFuzz, UriJoinNeverCrashes);
+#endif
+
 // NOLINTNEXTLINE
 TEST (UriCompose, Empty) {
   uri::parts p;
