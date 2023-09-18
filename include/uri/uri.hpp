@@ -24,43 +24,42 @@
 
 namespace uri {
 
-struct path {
-  bool absolute = false;
-  std::vector<std::string_view> segments;
-
-  constexpr bool operator== (path const& rhs) const {
-    return absolute == rhs.absolute && segments == rhs.segments;
-  }
-  constexpr bool operator!= (path const& rhs) const {
-    return !operator== (rhs);
-  }
-
-  // Remove dot segments from the path.
-  void remove_dot_segments ();
-  [[nodiscard]] constexpr bool empty () const noexcept {
-    return !absolute && segments.empty ();
-  }
-  explicit operator std::string () const;
-  explicit operator std::filesystem::path () const;
-};
-
-struct authority {
-  std::optional<std::string_view> userinfo;
-  std::optional<std::string_view> host;
-  std::optional<std::string_view> port;
-
-  constexpr explicit operator bool () const { return userinfo || host || port; }
-  constexpr bool operator== (authority const& rhs) const {
-    return userinfo == rhs.userinfo && host == rhs.host && port == rhs.port;
-  }
-  constexpr bool operator!= (authority const& rhs) const {
-    return !operator== (rhs);
-  }
-};
-
-std::ostream& operator<< (std::ostream& os, authority const& auth);
-
 struct parts {
+  struct path {
+    bool absolute = false;
+    std::vector<std::string_view> segments;
+
+    constexpr bool operator== (path const& rhs) const {
+      return absolute == rhs.absolute && segments == rhs.segments;
+    }
+    constexpr bool operator!= (path const& rhs) const {
+      return !operator== (rhs);
+    }
+
+    // Remove dot segments from the path.
+    void remove_dot_segments ();
+    [[nodiscard]] constexpr bool empty () const noexcept {
+      return !absolute && segments.empty ();
+    }
+    explicit operator std::string () const;
+    explicit operator std::filesystem::path () const;
+  };
+  struct authority {
+    std::optional<std::string_view> userinfo;
+    std::optional<std::string_view> host;
+    std::optional<std::string_view> port;
+
+    constexpr explicit operator bool () const {
+      return userinfo || host || port;
+    }
+    constexpr bool operator== (authority const& rhs) const {
+      return userinfo == rhs.userinfo && host == rhs.host && port == rhs.port;
+    }
+    constexpr bool operator!= (authority const& rhs) const {
+      return !operator== (rhs);
+    }
+  };
+
   std::optional<std::string_view> scheme;
   struct authority authority;
   struct path path;
@@ -76,6 +75,11 @@ struct parts {
   }
 };
 
+std::ostream& operator<< (std::ostream& os, struct parts::path const& path);
+std::ostream& operator<< (std::ostream& os,
+                          struct parts::authority const& auth);
+std::ostream& operator<< (std::ostream& os, parts const& p);
+
 std::optional<parts> split (std::string_view in);
 
 parts join (parts const& base, parts const& reference, bool strict = true);
@@ -84,7 +88,6 @@ std::optional<parts> join (std::string_view Base, std::string_view R,
 
 std::string compose (parts const& p);
 std::ostream& compose (std::ostream& os, parts const& p);
-std::ostream& operator<< (std::ostream& os, parts const& p);
 
 }  // end namespace uri
 

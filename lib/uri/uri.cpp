@@ -631,11 +631,11 @@ auto absolute_URI (uri::parts& result) {
 /// \param base  The base URL.
 /// \param ref  A relative-path reference.
 /// \result  The merged path.
-uri::path merge (uri::parts const& base, uri::parts const& ref) {
+struct uri::parts::path merge (uri::parts const& base, uri::parts const& ref) {
   // If the base URI has a defined authority component and an empty path, then
   // return a path consisting of "/" concatenated with the reference's path
   if (base.authority && base.path.empty ()) {
-    uri::path r1;
+    struct uri::parts::path r1;
     r1.absolute = true;
     r1.segments = ref.path.segments;
     return r1;
@@ -643,7 +643,7 @@ uri::path merge (uri::parts const& base, uri::parts const& ref) {
 
   // Return a path consisting of the reference's path component appended to all
   // but the last segment of the base URI's path.
-  uri::path r2;
+  struct uri::parts::path r2;
   r2.absolute = base.path.absolute;
 
   auto last = std::end (base.path.segments);
@@ -666,7 +666,7 @@ namespace uri {
 // referenced path. An implementation of the algorithm in RFC 3986,
 // section 5.2.4 "Remove Dot Segments"
 // (http://tools.ietf.org/html/rfc3986#section-5.2.4).
-void path::remove_dot_segments () {
+void parts::path::remove_dot_segments () {
   auto const begin = std::begin (this->segments);
   auto const end = std::end (this->segments);
   auto outit = begin;
@@ -703,7 +703,7 @@ void path::remove_dot_segments () {
   }
 }
 
-path::operator std::string () const {
+parts::path::operator std::string () const {
   std::string p;
   auto const* separator = absolute ? "/" : "";
   for (auto const& seg : segments) {
@@ -714,7 +714,7 @@ path::operator std::string () const {
   return p;
 }
 
-path::operator std::filesystem::path () const {
+parts::path::operator std::filesystem::path () const {
   std::filesystem::path p;
   if (absolute) {
     p /= "/";
@@ -734,7 +734,8 @@ std::optional<parts> split (std::string_view const in) {
   return {};
 }
 
-std::ostream& operator<< (std::ostream& os, authority const& auth) {
+std::ostream& operator<< (std::ostream& os,
+                          struct parts::authority const& auth) {
   if (auth.userinfo) {
     os << *auth.userinfo << "@";
   }
@@ -745,6 +746,10 @@ std::ostream& operator<< (std::ostream& os, authority const& auth) {
     os << ':' << *auth.port;
   }
   return os;
+}
+
+std::ostream& operator<< (std::ostream& os, struct parts::path const& path) {
+  return os << static_cast<std::string> (path);
 }
 
 // join
@@ -822,7 +827,7 @@ std::ostream& compose (std::ostream& os, parts const& p) {
   if (p.authority) {
     os << "//" << p.authority;
   }
-  os << static_cast<std::string> (p.path);
+  os << p.path;
   if (p.query) {
     os << '?' << *p.query;
   }
