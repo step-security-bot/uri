@@ -35,11 +35,17 @@ bool read_stream (std::istream& is) {
     auto value_or_none = [] (std::optional<std::string_view> const& s) {
       return s ? "\""s + std::string{s.value ()} + "\""s : "None"s;
     };
-    std::cout << " scheme: " << value_or_none (r->scheme)
-              << "\n userinfo: " << value_or_none (r->authority.userinfo)
-              << "\n host: " << value_or_none (r->authority.host)
-              << "\n port: " << value_or_none (r->authority.port)
-              << "\n path: " << std::quoted (static_cast<std::string> (r->path))
+    std::cout << " scheme: " << value_or_none (r->scheme);
+    if (r->authority.has_value ()) {
+      std::cout << "\n userinfo: " << value_or_none (r->authority->userinfo)
+                << "\n host: " << value_or_none (r->authority->host)
+                << "\n port: " << value_or_none (r->authority->port);
+    } else {
+      std::cout << "\n userinfo: None"
+                << "\n host: None"
+                << "\n port: None";
+    }
+    std::cout << "\n path: " << std::quoted (static_cast<std::string> (r->path))
               << "\n query: " << value_or_none (r->query)
               << "\n fragment: " << value_or_none (r->fragment) << '\n';
   }

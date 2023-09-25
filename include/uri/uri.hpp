@@ -22,6 +22,9 @@
 #include <string_view>
 #include <vector>
 
+#include "uri/pctdecode.hpp"
+#include "uri/pctencode.hpp"
+
 namespace uri {
 
 struct parts {
@@ -29,50 +32,37 @@ struct parts {
     bool absolute = false;
     std::vector<std::string_view> segments;
 
-    constexpr bool operator== (path const& rhs) const {
-      return absolute == rhs.absolute && segments == rhs.segments;
-    }
-    constexpr bool operator!= (path const& rhs) const {
-      return !operator== (rhs);
-    }
-
     // Remove dot segments from the path.
     void remove_dot_segments ();
     [[nodiscard]] constexpr bool empty () const noexcept {
-      return !absolute && segments.empty ();
+      return segments.empty ();
     }
     explicit operator std::string () const;
     explicit operator std::filesystem::path () const;
+    bool operator== (path const& rhs) const;
+    bool operator!= (path const& rhs) const { return !operator== (rhs); }
   };
   struct authority {
     std::optional<std::string_view> userinfo;
-    std::optional<std::string_view> host;
+    std::string_view host;
     std::optional<std::string_view> port;
 
-    constexpr explicit operator bool () const {
-      return userinfo || host || port;
-    }
-    constexpr bool operator== (authority const& rhs) const {
-      return userinfo == rhs.userinfo && host == rhs.host && port == rhs.port;
-    }
-    constexpr bool operator!= (authority const& rhs) const {
-      return !operator== (rhs);
-    }
+    bool operator== (authority const& rhs) const;
+    bool operator!= (authority const& rhs) const { return !operator== (rhs); }
   };
 
   std::optional<std::string_view> scheme;
-  struct authority authority;
+  std::optional<struct authority> authority;
   struct path path;
   std::optional<std::string_view> query;
   std::optional<std::string_view> fragment;
 
-  constexpr bool operator== (parts const& rhs) const {
-    return scheme == rhs.scheme && authority == rhs.authority &&
-           path == rhs.path && query == rhs.query && fragment == rhs.fragment;
+  [[nodiscard]] constexpr bool valid () const noexcept {
+    return !authority || path.absolute;
   }
-  constexpr bool operator!= (parts const& rhs) const {
-    return !operator== (rhs);
-  }
+
+  bool operator== (parts const& rhs) const;
+  bool operator!= (parts const& rhs) const { return !operator== (rhs); }
 };
 
 std::ostream& operator<< (std::ostream& os, struct parts::path const& path);

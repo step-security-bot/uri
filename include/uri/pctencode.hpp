@@ -24,7 +24,7 @@ namespace uri {
 
 constexpr char dec2hex (unsigned const v) noexcept {
   assert (v < 0x10);
-  return static_cast<char> (v + ((v < 10) ? '0' : 'a' - 10));
+  return static_cast<char> (v + ((v < 10) ? '0' : 'A' - 10));
 }
 
 // punctuation characters. This collection of characters is based on the "C"
@@ -52,6 +52,11 @@ constexpr bool isprint (ValueT const v) {
   return std::find (std::begin (delims<ValueT>), end, v) != end;
 }
 
+template <typename InputIterator>
+bool needs_pctencode (InputIterator first, InputIterator last) {
+  return std::any_of (first, last, [] (auto c) { return !isprint (c); });
+}
+
 template <typename InputIterator, typename OutputIterator>
 OutputIterator pctencode (InputIterator first, InputIterator last,
                           OutputIterator out) {
@@ -66,6 +71,13 @@ OutputIterator pctencode (InputIterator first, InputIterator last,
     *(out++) = c;
   }
   return out;
+}
+
+inline std::string pctencode (std::string_view s) {
+  std::string result;
+  result.reserve (s.length ());
+  pctencode (std::begin (s), std::end (s), std::back_inserter (result));
+  return result;
 }
 
 }  // namespace uri

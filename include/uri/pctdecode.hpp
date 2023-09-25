@@ -21,6 +21,7 @@
 #include <cctype>
 #include <cstddef>
 #include <iterator>
+#include <string>
 #include <string_view>
 #include <utility>
 
@@ -101,6 +102,11 @@ ReferenceType deref (Iterator pos, Iterator end, ValueType* const hex) {
 }
 
 }  // end namespace details
+
+template <std::input_iterator InputIterator>
+bool needs_pctdecode (InputIterator first, InputIterator last) {
+  return std::find_if (first, last, [] (auto c) { return c == '%'; }) != last;
+}
 
 #if URI_PCTDECODE_RANGES
 template <std::ranges::input_range View>
@@ -359,6 +365,15 @@ private:
 
 template <typename Container>
 pctdecoder (Container) -> pctdecoder<typename Container::const_iterator>;
+
+inline std::string pctdecode (std::string_view s) {
+  std::string result;
+  result.reserve (s.length ());
+  for (auto const& c : pctdecoder{s}) {
+    result += c;
+  }
+  return result;
+}
 
 }  // end namespace uri
 
