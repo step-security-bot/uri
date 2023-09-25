@@ -34,9 +34,7 @@ struct parts {
 
     // Remove dot segments from the path.
     void remove_dot_segments ();
-    [[nodiscard]] constexpr bool empty () const noexcept {
-      return segments.empty ();
-    }
+    [[nodiscard]] bool empty () const noexcept { return segments.empty (); }
     explicit operator std::string () const;
     explicit operator std::filesystem::path () const;
     bool operator== (path const& rhs) const;
