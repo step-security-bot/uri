@@ -57,31 +57,6 @@ bool needs_pctencode (InputIterator first, InputIterator last) {
   return std::any_of (first, last, [] (auto c) { return !isprint (c); });
 }
 
-// punctuation characters. This collection of characters is based on the "C"
-// locale's "printable" punctuation characters with the set of gen-delims and
-// sub-delims characters from the URI specification removed.
-template <typename ValueT>
-inline constexpr std::array<ValueT, 14> delims{
-  {'"', '-', '.', '<', '>', '\\', '^', '_', '`', '{', '|', '}', '~', ')'}};
-
-template <typename ValueT>
-constexpr bool isprint (ValueT const v) {
-  if (v >= '0' && v <= '9') {
-    return true;
-  }
-  if (v >= 'A' && v <= 'Z') {
-    return true;
-  }
-  if (v >= 'a' && v <= 'z') {
-    return true;
-  }
-  if (v == ' ') {
-    return true;
-  }
-  constexpr auto end = std::end (delims<ValueT>);
-  return std::find (std::begin (delims<ValueT>), end, v) != end;
-}
-
 template <typename InputIterator, typename OutputIterator>
 OutputIterator pctencode (InputIterator first, InputIterator last,
                           OutputIterator out) {
