@@ -702,7 +702,7 @@ void parts::path::remove_dot_segments () {
     } else {
       last_dir = it->empty ();
       if (outit != it) {
-        *outit = std::move (*it);
+        *outit = *it;
       }
       ++outit;
     }
