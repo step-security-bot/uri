@@ -14,10 +14,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "uri/uri.hpp"
+
 #include <algorithm>
 #include <numeric>
-
-#include "uri/uri.hpp"
 
 // google test
 #include "gmock/gmock.h"
