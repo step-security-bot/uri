@@ -103,7 +103,11 @@ ReferenceType deref (Iterator pos, Iterator end, ValueType* const hex) {
 
 }  // end namespace details
 
+#if defined(__cpp_concepts) && defined(__cpp_lib_concepts)
 template <std::input_iterator InputIterator>
+#else
+template <typename InputIterator>
+#endif
 bool needs_pctdecode (InputIterator first, InputIterator last) {
   return std::find_if (first, last, [] (auto c) { return c == '%'; }) != last;
 }
