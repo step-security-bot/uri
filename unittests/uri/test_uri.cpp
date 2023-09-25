@@ -16,6 +16,9 @@
 
 #include "uri/uri.hpp"
 
+#include <algorithm>
+#include <numeric>
+
 // google test
 #include "gmock/gmock.h"
 #if URI_FUZZTEST
@@ -57,9 +60,10 @@ TEST (UriSplit, 0001) {
   auto const x = uri::split ("C://[::A:eE5c]:2194/&///@//:_/%aB//.////#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "C");
-  EXPECT_FALSE (x->authority.userinfo);
-  EXPECT_EQ (x->authority.host, "[::A:eE5c]");
-  EXPECT_EQ (x->authority.port, "2194");
+  ASSERT_TRUE (x->authority);
+  EXPECT_FALSE (x->authority->userinfo);
+  EXPECT_EQ (x->authority->host, "[::A:eE5c]");
+  EXPECT_EQ (x->authority->port, "2194");
   EXPECT_TRUE (x->path.absolute);
   EXPECT_THAT (x->path.segments, ElementsAre ("&", "", "", "@", "", ":_", "%aB",
                                               "", ".", "", "", "", ""));
@@ -234,9 +238,10 @@ TEST (UriSplit, 0016) {
   auto const x = uri::split ("P://=:_%bb%Cf%2F-8;~@230.109.31.250#.");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "P");
-  EXPECT_EQ (x->authority.userinfo, "=:_%bb%Cf%2F-8;~");
-  EXPECT_EQ (x->authority.host, "230.109.31.250");
-  EXPECT_FALSE (x->authority.port);
+  ASSERT_TRUE (x->authority);
+  EXPECT_EQ (x->authority->userinfo, "=:_%bb%Cf%2F-8;~");
+  EXPECT_EQ (x->authority->host, "230.109.31.250");
+  EXPECT_FALSE (x->authority->port);
   EXPECT_FALSE (x->path.absolute);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
@@ -247,9 +252,10 @@ TEST (UriSplit, 0017) {
   auto const x = uri::split ("N://@=i%bD%Cb&*%Ea)%CE//:%cA//#?//");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "N");
-  EXPECT_EQ (x->authority.userinfo, "");
-  EXPECT_EQ (x->authority.host, "=i%bD%Cb&*%Ea)%CE");
-  EXPECT_FALSE (x->authority.port);
+  ASSERT_TRUE (x->authority.has_value ());
+  EXPECT_EQ (x->authority->userinfo, "");
+  EXPECT_EQ (x->authority->host, "=i%bD%Cb&*%Ea)%CE");
+  EXPECT_FALSE (x->authority->port);
   EXPECT_TRUE (x->path.absolute);
   EXPECT_THAT (x->path.segments, ElementsAre ("", ":%cA", "", ""));
   EXPECT_FALSE (x->query);
@@ -306,9 +312,10 @@ TEST (UriSplit, 0022) {
   auto const x = uri::split ("T.-://:@[VD.~]:?/@#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "T.-");
-  EXPECT_EQ (x->authority.userinfo, ":");
-  EXPECT_EQ (x->authority.host, "[VD.~]");
-  EXPECT_EQ (x->authority.port, "");
+  ASSERT_TRUE (x->authority.has_value ());
+  EXPECT_EQ (x->authority->userinfo, ":");
+  EXPECT_EQ (x->authority->host, "[VD.~]");
+  EXPECT_EQ (x->authority->port, "");
   EXPECT_FALSE (x->path.absolute);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "/@");
@@ -319,9 +326,10 @@ TEST (UriSplit, 0023) {
   auto const x = uri::split ("rC://3.76.206.5:8966?/");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "rC");
-  EXPECT_FALSE (x->authority.userinfo);
-  EXPECT_EQ (x->authority.host, "3.76.206.5");
-  EXPECT_EQ (x->authority.port, "8966");
+  ASSERT_TRUE (x->authority.has_value ());
+  EXPECT_FALSE (x->authority->userinfo);
+  EXPECT_EQ (x->authority->host, "3.76.206.5");
+  EXPECT_EQ (x->authority->port, "8966");
   EXPECT_FALSE (x->path.absolute);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "/");
@@ -332,9 +340,10 @@ TEST (UriSplit, 0024) {
   auto const x = uri::split ("oNP:///::");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "oNP");
-  EXPECT_FALSE (x->authority.userinfo);
-  EXPECT_EQ (x->authority.host, "");
-  EXPECT_FALSE (x->authority.port);
+  ASSERT_TRUE (x->authority.has_value ());
+  EXPECT_FALSE (x->authority->userinfo);
+  EXPECT_EQ (x->authority->host, "");
+  EXPECT_FALSE (x->authority->port);
   EXPECT_TRUE (x->path.absolute);
   EXPECT_THAT (x->path.segments, ElementsAre ("::"));
   EXPECT_FALSE (x->query);
@@ -378,9 +387,10 @@ TEST (UriSplit, 0028) {
   auto const x = uri::split ("tc://@[::F]:/::@~?@/");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "tc");
-  EXPECT_EQ (x->authority.userinfo, "");
-  EXPECT_EQ (x->authority.host, "[::F]");
-  EXPECT_EQ (x->authority.port, "");
+  ASSERT_TRUE (x->authority.has_value ());
+  EXPECT_EQ (x->authority->userinfo, "");
+  EXPECT_EQ (x->authority->host, "[::F]");
+  EXPECT_EQ (x->authority->port, "");
   EXPECT_TRUE (x->path.absolute);
   EXPECT_THAT (x->path.segments, ElementsAre ("::@~"));
   EXPECT_EQ (x->query, "@/");
@@ -424,9 +434,10 @@ TEST (UriSplit, 0032) {
   auto const x = uri::split (R"(y://%DD@253.216.255.251//aa/??/://;)");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "y");
-  EXPECT_EQ (x->authority.userinfo, "%DD");
-  EXPECT_EQ (x->authority.host, "253.216.255.251");
-  EXPECT_FALSE (x->authority.port);
+  ASSERT_TRUE (x->authority.has_value ());
+  EXPECT_EQ (x->authority->userinfo, "%DD");
+  EXPECT_EQ (x->authority->host, "253.216.255.251");
+  EXPECT_FALSE (x->authority->port.has_value ());
   EXPECT_TRUE (x->path.absolute);
   EXPECT_THAT (x->path.segments, ElementsAre ("", "aa", ""));
   EXPECT_EQ (x->query, "?/://;");
@@ -439,9 +450,10 @@ TEST (UriSplit, 0033) {
   auto const x = uri::split ("B://.@[AC::1:6DEb:14.97.229.249]:?/#??~(");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "B");
-  EXPECT_EQ (x->authority.userinfo, ".");
-  EXPECT_EQ (x->authority.host, "[AC::1:6DEb:14.97.229.249]");
-  EXPECT_EQ (x->authority.port, "");
+  ASSERT_TRUE (x->authority.has_value ());
+  EXPECT_EQ (x->authority->userinfo, ".");
+  EXPECT_EQ (x->authority->host, "[AC::1:6DEb:14.97.229.249]");
+  EXPECT_EQ (x->authority->port, "");
   EXPECT_FALSE (x->path.absolute);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "/");
@@ -452,9 +464,10 @@ TEST (UriSplit, 0034) {
   auto const x = uri::split ("p://@26.254.86.252://aa");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "p");
-  EXPECT_EQ (x->authority.userinfo, "");
-  EXPECT_EQ (x->authority.host, "26.254.86.252");
-  EXPECT_EQ (x->authority.port, "");
+  ASSERT_TRUE (x->authority.has_value ());
+  EXPECT_EQ (x->authority->userinfo, "");
+  EXPECT_EQ (x->authority->host, "26.254.86.252");
+  EXPECT_EQ (x->authority->port, "");
   EXPECT_TRUE (x->path.absolute);
   EXPECT_THAT (x->path.segments, ElementsAre ("", "aa"));
   EXPECT_FALSE (x->query);
@@ -489,9 +502,10 @@ TEST (UriSplit, 0037) {
   auto const x = uri::split ("U://%Aa:@[::b:E:A:53.48.69.41]?");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "U");
-  EXPECT_EQ (x->authority.userinfo, "%Aa:");
-  EXPECT_EQ (x->authority.host, "[::b:E:A:53.48.69.41]");
-  EXPECT_FALSE (x->authority.port);
+  ASSERT_TRUE (x->authority.has_value ());
+  EXPECT_EQ (x->authority->userinfo, "%Aa:");
+  EXPECT_EQ (x->authority->host, "[::b:E:A:53.48.69.41]");
+  EXPECT_FALSE (x->authority->port);
   EXPECT_FALSE (x->path.absolute);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "");
@@ -590,9 +604,10 @@ TEST (UriSplit, 0046) {
   auto const x = uri::split ("Z5://@[9:BB:8:DAc:BbAA:E:a::]?#@$");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "Z5");
-  EXPECT_EQ (x->authority.userinfo, "");
-  EXPECT_EQ (x->authority.host, "[9:BB:8:DAc:BbAA:E:a::]");
-  EXPECT_FALSE (x->authority.port);
+  ASSERT_TRUE (x->authority.has_value ());
+  EXPECT_EQ (x->authority->userinfo, "");
+  EXPECT_EQ (x->authority->host, "[9:BB:8:DAc:BbAA:E:a::]");
+  EXPECT_FALSE (x->authority->port.has_value ());
   EXPECT_FALSE (x->path.absolute);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "");
@@ -603,9 +618,10 @@ TEST (UriSplit, 0047) {
   auto const x = uri::split ("C-://[::1E:BB:a:5c1:Dd:40.44.228.108]/;?#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "C-");
-  EXPECT_FALSE (x->authority.userinfo);
-  EXPECT_EQ (x->authority.host, "[::1E:BB:a:5c1:Dd:40.44.228.108]");
-  EXPECT_FALSE (x->authority.port);
+  ASSERT_TRUE (x->authority.has_value ());
+  EXPECT_FALSE (x->authority->userinfo);
+  EXPECT_EQ (x->authority->host, "[::1E:BB:a:5c1:Dd:40.44.228.108]");
+  EXPECT_FALSE (x->authority->port);
   EXPECT_TRUE (x->path.absolute);
   EXPECT_THAT (x->path.segments, ElementsAre (";"));
   EXPECT_EQ (x->query, "");
@@ -616,9 +632,10 @@ TEST (UriSplit, 0048) {
   auto const x = uri::split ("z://[c:BC:b:A:Bd:D:dC1f:cedB]?/#/:/%FA");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "z");
-  EXPECT_FALSE (x->authority.userinfo);
-  EXPECT_EQ (x->authority.host, "[c:BC:b:A:Bd:D:dC1f:cedB]");
-  EXPECT_FALSE (x->authority.port);
+  ASSERT_TRUE (x->authority.has_value ());
+  EXPECT_FALSE (x->authority->userinfo);
+  EXPECT_EQ (x->authority->host, "[c:BC:b:A:Bd:D:dC1f:cedB]");
+  EXPECT_FALSE (x->authority->port);
   EXPECT_FALSE (x->path.absolute);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "/");
@@ -640,9 +657,10 @@ TEST (UriSplit, 0050) {
   auto const x = uri::split ("p://@[::F:e:4b:eCBE:f:c]");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "p");
-  EXPECT_EQ (x->authority.userinfo, "");
-  EXPECT_EQ (x->authority.host, "[::F:e:4b:eCBE:f:c]");
-  EXPECT_FALSE (x->authority.port);
+  ASSERT_TRUE (x->authority.has_value ());
+  EXPECT_EQ (x->authority->userinfo, "");
+  EXPECT_EQ (x->authority->host, "[::F:e:4b:eCBE:f:c]");
+  EXPECT_FALSE (x->authority->port);
   EXPECT_FALSE (x->path.absolute);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
@@ -653,9 +671,10 @@ TEST (UriSplit, 0051) {
   auto const x = uri::split ("tmi://[e:C:Aa:eD::FDfD:b:F]:?");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "tmi");
-  EXPECT_FALSE (x->authority.userinfo);
-  EXPECT_EQ (x->authority.host, "[e:C:Aa:eD::FDfD:b:F]");
-  EXPECT_EQ (x->authority.port, "");
+  ASSERT_TRUE (x->authority.has_value ());
+  EXPECT_FALSE (x->authority->userinfo);
+  EXPECT_EQ (x->authority->host, "[e:C:Aa:eD::FDfD:b:F]");
+  EXPECT_EQ (x->authority->port, "");
   EXPECT_FALSE (x->path.absolute);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "");
@@ -677,9 +696,10 @@ TEST (UriSplit, 0053) {
   auto const x = uri::split ("A://[vA5.+:=.p~=)=&_;-=7)(.;]:768295/+");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "A");
-  EXPECT_FALSE (x->authority.userinfo);
-  EXPECT_EQ (x->authority.host, "[vA5.+:=.p~=)=&_;-=7)(.;]");
-  EXPECT_EQ (x->authority.port, "768295");
+  ASSERT_TRUE (x->authority.has_value ());
+  EXPECT_FALSE (x->authority->userinfo);
+  EXPECT_EQ (x->authority->host, "[vA5.+:=.p~=)=&_;-=7)(.;]");
+  EXPECT_EQ (x->authority->port, "768295");
   EXPECT_TRUE (x->path.absolute);
   EXPECT_THAT (x->path.segments, ElementsAre ("+"));
   EXPECT_FALSE (x->query);
@@ -690,9 +710,10 @@ TEST (UriSplit, 0054) {
   auto const x = uri::split ("n+://[::]:9831#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "n+");
-  EXPECT_FALSE (x->authority.userinfo);
-  EXPECT_EQ (x->authority.host, "[::]");
-  EXPECT_EQ (x->authority.port, "9831");
+  ASSERT_TRUE (x->authority.has_value ());
+  EXPECT_FALSE (x->authority->userinfo);
+  EXPECT_EQ (x->authority->host, "[::]");
+  EXPECT_EQ (x->authority->port, "9831");
   EXPECT_FALSE (x->path.absolute);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
@@ -714,9 +735,10 @@ TEST (UriSplit, 0056) {
   auto const x = uri::split ("ka+://6.@[F::219.226.254.253]:900/'R#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "ka+");
-  EXPECT_EQ (x->authority.userinfo, "6.");
-  EXPECT_EQ (x->authority.host, "[F::219.226.254.253]");
-  EXPECT_EQ (x->authority.port, "900");
+  ASSERT_TRUE (x->authority.has_value ());
+  EXPECT_EQ (x->authority->userinfo, "6.");
+  EXPECT_EQ (x->authority->host, "[F::219.226.254.253]");
+  EXPECT_EQ (x->authority->port, "900");
   EXPECT_TRUE (x->path.absolute);
   EXPECT_THAT (x->path.segments, ElementsAre ("'R"));
   EXPECT_FALSE (x->query);
@@ -727,9 +749,10 @@ TEST (UriSplit, 0057) {
   auto const x = uri::split ("P://[daf::B:7:e:b:D:F]:730");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "P");
-  EXPECT_FALSE (x->authority.userinfo);
-  EXPECT_EQ (x->authority.host, "[daf::B:7:e:b:D:F]");
-  EXPECT_EQ (x->authority.port, "730");
+  ASSERT_TRUE (x->authority.has_value ());
+  EXPECT_FALSE (x->authority->userinfo);
+  EXPECT_EQ (x->authority->host, "[daf::B:7:e:b:D:F]");
+  EXPECT_EQ (x->authority->port, "730");
   EXPECT_FALSE (x->path.absolute);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
@@ -740,9 +763,10 @@ TEST (UriSplit, 0058) {
   auto const x = uri::split ("H://-!:_%Bd@[::]:7");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "H");
-  EXPECT_EQ (x->authority.userinfo, "-!:_%Bd");
-  EXPECT_EQ (x->authority.host, "[::]");
-  EXPECT_EQ (x->authority.port, "7");
+  ASSERT_TRUE (x->authority.has_value ());
+  EXPECT_EQ (x->authority->userinfo, "-!:_%Bd");
+  EXPECT_EQ (x->authority->host, "[::]");
+  EXPECT_EQ (x->authority->port, "7");
   EXPECT_FALSE (x->path.absolute);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
@@ -753,9 +777,10 @@ TEST (UriSplit, 0059) {
   auto const x = uri::split ("u+://;@[::dFC:d:6:d]://#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "u+");
-  EXPECT_EQ (x->authority.userinfo, ";");
-  EXPECT_EQ (x->authority.host, "[::dFC:d:6:d]");
-  EXPECT_EQ (x->authority.port, "");
+  ASSERT_TRUE (x->authority.has_value ());
+  EXPECT_EQ (x->authority->userinfo, ";");
+  EXPECT_EQ (x->authority->host, "[::dFC:d:6:d]");
+  EXPECT_EQ (x->authority->port, "");
   EXPECT_TRUE (x->path.absolute);
   EXPECT_THAT (x->path.segments, ElementsAre ("", ""));
   EXPECT_FALSE (x->query);
@@ -768,9 +793,10 @@ TEST (UriSplit, 0060) {
   auto const x = uri::split ("D://[dCDa:c:e:B:F::D:a]:/%Dc");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "D");
-  EXPECT_FALSE (x->authority.userinfo);
-  EXPECT_EQ (x->authority.host, "[dCDa:c:e:B:F::D:a]");
-  EXPECT_EQ (x->authority.port, "");
+  ASSERT_TRUE (x->authority.has_value ());
+  EXPECT_FALSE (x->authority->userinfo);
+  EXPECT_EQ (x->authority->host, "[dCDa:c:e:B:F::D:a]");
+  EXPECT_EQ (x->authority->port, "");
   EXPECT_TRUE (x->path.absolute);
   EXPECT_THAT (x->path.segments, ElementsAre ("%Dc"));
   EXPECT_FALSE (x->query);
@@ -792,9 +818,10 @@ TEST (UriSplit, 0062) {
   auto const x = uri::split ("f.://[d1b:CF:AbBa::F:d:11.246.155.253]?");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "f.");
-  EXPECT_FALSE (x->authority.userinfo);
-  EXPECT_EQ (x->authority.host, "[d1b:CF:AbBa::F:d:11.246.155.253]");
-  EXPECT_FALSE (x->authority.port);
+  ASSERT_TRUE (x->authority.has_value ());
+  EXPECT_FALSE (x->authority->userinfo);
+  EXPECT_EQ (x->authority->host, "[d1b:CF:AbBa::F:d:11.246.155.253]");
+  EXPECT_FALSE (x->authority->port);
   EXPECT_FALSE (x->path.absolute);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "");
@@ -805,9 +832,10 @@ TEST (UriSplit, 0063) {
   auto const x = uri::split ("f5++://@[7d::6:df:f:245.95.78.9]:??");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "f5++");
-  EXPECT_EQ (x->authority.userinfo, "");
-  EXPECT_EQ (x->authority.host, "[7d::6:df:f:245.95.78.9]");
-  EXPECT_EQ (x->authority.port, "");
+  ASSERT_TRUE (x->authority.has_value ());
+  EXPECT_EQ (x->authority->userinfo, "");
+  EXPECT_EQ (x->authority->host, "[7d::6:df:f:245.95.78.9]");
+  EXPECT_EQ (x->authority->port, "");
   EXPECT_FALSE (x->path.absolute);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "?");
@@ -818,9 +846,10 @@ TEST (UriSplit, 0064) {
   auto const x = uri::split ("c.l://[::bba:B:6:1.255.161.3]:#?/");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "c.l");
-  EXPECT_FALSE (x->authority.userinfo);
-  EXPECT_EQ (x->authority.host, "[::bba:B:6:1.255.161.3]");
-  EXPECT_EQ (x->authority.port, "");
+  ASSERT_TRUE (x->authority.has_value ());
+  EXPECT_FALSE (x->authority->userinfo);
+  EXPECT_EQ (x->authority->host, "[::bba:B:6:1.255.161.3]");
+  EXPECT_EQ (x->authority->port, "");
   EXPECT_FALSE (x->path.absolute);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
@@ -831,9 +860,10 @@ TEST (UriSplit, 0065) {
   auto const x = uri::split ("T://[fdF::f2]");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "T");
-  EXPECT_FALSE (x->authority.userinfo);
-  EXPECT_EQ (x->authority.host, "[fdF::f2]");
-  EXPECT_FALSE (x->authority.port);
+  ASSERT_TRUE (x->authority.has_value ());
+  EXPECT_FALSE (x->authority->userinfo);
+  EXPECT_EQ (x->authority->host, "[fdF::f2]");
+  EXPECT_FALSE (x->authority->port);
   EXPECT_FALSE (x->path.absolute);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
@@ -844,9 +874,10 @@ TEST (UriSplit, 0066) {
   auto const x = uri::split ("U-92.://[::A:C:c]/");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "U-92.");
-  EXPECT_FALSE (x->authority.userinfo);
-  EXPECT_EQ (x->authority.host, "[::A:C:c]");
-  EXPECT_FALSE (x->authority.port);
+  ASSERT_TRUE (x->authority.has_value ());
+  EXPECT_FALSE (x->authority->userinfo);
+  EXPECT_EQ (x->authority->host, "[::A:C:c]");
+  EXPECT_FALSE (x->authority->port);
   EXPECT_TRUE (x->path.absolute);
   EXPECT_THAT (x->path.segments, ElementsAre (""));
   EXPECT_FALSE (x->query);
@@ -870,9 +901,10 @@ TEST (UriSplit, 0068) {
   auto const x = uri::split ("l.://[c:CEa:cd1B:f:f:D::ef]?#%bC@/:");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "l.");
-  EXPECT_FALSE (x->authority.userinfo);
-  EXPECT_EQ (x->authority.host, "[c:CEa:cd1B:f:f:D::ef]");
-  EXPECT_FALSE (x->authority.port);
+  ASSERT_TRUE (x->authority.has_value ());
+  EXPECT_FALSE (x->authority->userinfo);
+  EXPECT_EQ (x->authority->host, "[c:CEa:cd1B:f:f:D::ef]");
+  EXPECT_FALSE (x->authority->port);
   EXPECT_FALSE (x->path.absolute);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_EQ (x->query, "");
@@ -884,9 +916,10 @@ TEST (UriSplit, 0069) {
     uri::split (R"(v+://@[::C:dEd:4:218.255.251.5]:8/@.;J??Q??%48/#)");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "v+");
-  EXPECT_EQ (x->authority.userinfo, "");
-  EXPECT_EQ (x->authority.host, "[::C:dEd:4:218.255.251.5]");
-  EXPECT_EQ (x->authority.port, "8");
+  ASSERT_TRUE (x->authority.has_value ());
+  EXPECT_EQ (x->authority->userinfo, "");
+  EXPECT_EQ (x->authority->host, "[::C:dEd:4:218.255.251.5]");
+  EXPECT_EQ (x->authority->port, "8");
   EXPECT_TRUE (x->path.absolute);
   EXPECT_THAT (x->path.segments, ElementsAre ("@.;J"));
   EXPECT_EQ (x->query, R"(?Q??%48/)");
@@ -908,9 +941,10 @@ TEST (UriSplit, 0071) {
   auto const x = uri::split ("t.+://[::Ec:AcA:9a]:92/%8a/#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "t.+");
-  EXPECT_FALSE (x->authority.userinfo);
-  EXPECT_EQ (x->authority.host, "[::Ec:AcA:9a]");
-  EXPECT_EQ (x->authority.port, "92");
+  ASSERT_TRUE (x->authority.has_value ());
+  EXPECT_FALSE (x->authority->userinfo);
+  EXPECT_EQ (x->authority->host, "[::Ec:AcA:9a]");
+  EXPECT_EQ (x->authority->port, "92");
   EXPECT_TRUE (x->path.absolute);
   EXPECT_THAT (x->path.segments, ElementsAre ("%8a", ""));
   EXPECT_FALSE (x->query);
@@ -945,9 +979,10 @@ TEST (UriSplit, 0074) {
   auto const x = uri::split ("u8K.://.(@[d::Baa:dE:D]#/");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "u8K.");
-  EXPECT_EQ (x->authority.userinfo, ".(");
-  EXPECT_EQ (x->authority.host, "[d::Baa:dE:D]");
-  EXPECT_FALSE (x->authority.port);
+  ASSERT_TRUE (x->authority.has_value ());
+  EXPECT_EQ (x->authority->userinfo, ".(");
+  EXPECT_EQ (x->authority->host, "[d::Baa:dE:D]");
+  EXPECT_FALSE (x->authority->port);
   EXPECT_FALSE (x->path.absolute);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
@@ -958,9 +993,10 @@ TEST (UriSplit, 0075) {
   auto const x = uri::split ("E+.://@[::F:ab79:B:fa:C]#");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "E+.");
-  EXPECT_EQ (x->authority.userinfo, "");
-  EXPECT_EQ (x->authority.host, "[::F:ab79:B:fa:C]");
-  EXPECT_FALSE (x->authority.port);
+  ASSERT_TRUE (x->authority.has_value ());
+  EXPECT_EQ (x->authority->userinfo, "");
+  EXPECT_EQ (x->authority->host, "[::F:ab79:B:fa:C]");
+  EXPECT_FALSE (x->authority->port);
   EXPECT_FALSE (x->path.absolute);
   EXPECT_TRUE (x->path.segments.empty ());
   EXPECT_FALSE (x->query);
@@ -971,9 +1007,10 @@ TEST (UriSplit, 0076) {
   auto const x = uri::split ("S+://[::BBc:d0:EA:3.67.149.137]:/?#/");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "S+");
-  EXPECT_FALSE (x->authority.userinfo);
-  EXPECT_EQ (x->authority.host, "[::BBc:d0:EA:3.67.149.137]");
-  EXPECT_EQ (x->authority.port, "");
+  ASSERT_TRUE (x->authority.has_value ());
+  EXPECT_FALSE (x->authority->userinfo);
+  EXPECT_EQ (x->authority->host, "[::BBc:d0:EA:3.67.149.137]");
+  EXPECT_EQ (x->authority->port, "");
   EXPECT_TRUE (x->path.absolute);
   EXPECT_THAT (x->path.segments, ElementsAre (""));
   EXPECT_EQ (x->query, "");
@@ -987,9 +1024,10 @@ TEST (UriSplit, 0077) {
   auto const x = uri::split (R"(Y://[4Bbc:bb::cDcd:5:c4:e:B1]:/%CA@/./??)");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "Y");
-  EXPECT_FALSE (x->authority.userinfo);
-  EXPECT_EQ (x->authority.host, "[4Bbc:bb::cDcd:5:c4:e:B1]");
-  EXPECT_EQ (x->authority.port, "");
+  ASSERT_TRUE (x->authority.has_value ());
+  EXPECT_FALSE (x->authority->userinfo);
+  EXPECT_EQ (x->authority->host, "[4Bbc:bb::cDcd:5:c4:e:B1]");
+  EXPECT_EQ (x->authority->port, "");
   EXPECT_TRUE (x->path.absolute);
   EXPECT_THAT (x->path.segments, ElementsAre ("%CA@", ".", ""));
   EXPECT_EQ (x->query, "?");
@@ -1003,9 +1041,10 @@ TEST (UriSplit, 0078) {
   auto const x = uri::split ("W.-://[CF::]://!?");
   ASSERT_TRUE (x);
   EXPECT_EQ (x->scheme, "W.-");
-  EXPECT_FALSE (x->authority.userinfo);
-  EXPECT_EQ (x->authority.host, "[CF::]");
-  EXPECT_EQ (x->authority.port, "");
+  ASSERT_TRUE (x->authority.has_value ());
+  EXPECT_FALSE (x->authority->userinfo);
+  EXPECT_EQ (x->authority->host, "[CF::]");
+  EXPECT_EQ (x->authority->port, "");
   EXPECT_TRUE (x->path.absolute);
   EXPECT_THAT (x->path.segments, ElementsAre ("", "!"));
   EXPECT_EQ (x->query, "");
@@ -1434,14 +1473,14 @@ TEST (RemoveDotSegments, LonelyDotDotSlashDot) {
 
 // NOLINTNEXTLINE
 TEST (UriFileSystemPath, Root) {
-  uri::path p;
+  struct uri::parts::path p;
   p.absolute = true;
   EXPECT_EQ (static_cast<std::filesystem::path> (p),
              std::filesystem::path ("/"));
 }
 // NOLINTNEXTLINE
 TEST (UriFileSystemPath, RootFoo) {
-  uri::path p;
+  struct uri::parts::path p;
   p.absolute = true;
   p.segments.emplace_back ("foo");
   EXPECT_EQ (static_cast<std::filesystem::path> (p),
@@ -1449,7 +1488,7 @@ TEST (UriFileSystemPath, RootFoo) {
 }
 // NOLINTNEXTLINE
 TEST (UriFileSystemPath, AbsoluteTwoSegments) {
-  uri::path p;
+  struct uri::parts::path p;
   p.absolute = true;
   p.segments.emplace_back ("foo");
   p.segments.emplace_back ("bar");
@@ -1458,7 +1497,7 @@ TEST (UriFileSystemPath, AbsoluteTwoSegments) {
 }
 // NOLINTNEXTLINE
 TEST (UriFileSystemPath, AbsoluteTwoSegmentsDirectory) {
-  uri::path p;
+  struct uri::parts::path p;
   p.absolute = true;
   p.segments.emplace_back ("foo");
   p.segments.emplace_back ("bar");
@@ -1468,7 +1507,7 @@ TEST (UriFileSystemPath, AbsoluteTwoSegmentsDirectory) {
 }
 // NOLINTNEXTLINE
 TEST (UriFileSystemPath, RelativeTwoSegments) {
-  uri::path p;
+  struct uri::parts::path p;
   p.segments.emplace_back ("foo");
   p.segments.emplace_back ("bar");
   EXPECT_EQ (static_cast<std::filesystem::path> (p),
@@ -1476,7 +1515,7 @@ TEST (UriFileSystemPath, RelativeTwoSegments) {
 }
 // NOLINTNEXTLINE
 TEST (UriFileSystemPath, RelativeTwoSegmentsDirectory) {
-  uri::path p;
+  struct uri::parts::path p;
   p.segments.emplace_back ("foo");
   p.segments.emplace_back ("bar");
   p.segments.emplace_back ();
@@ -1562,6 +1601,30 @@ TEST_F (Join, Abnormal) {
   EXPECT_EQ (uri::split ("http:g"), uri::join (base_, "http:g"));
 }
 
+#if URI_FUZZTEST
+using authority = std::optional<struct uri::parts::authority>;
+struct parts_without_authority {
+  std::optional<std::string> scheme;
+  struct uri::parts::path path;
+  std::optional<std::string> query;
+  std::optional<std::string> fragment;
+
+  uri::parts as_parts (
+    std::optional<struct uri::parts::authority> const& authority) const {
+    return uri::parts{scheme, authority, path, query, fragment};
+  }
+};
+
+static void UriJoinNeverCrashes (parts_without_authority const& base,
+                                 authority const& base_auth,
+                                 parts_without_authority const& reference,
+                                 authority const& reference_auth, bool strict) {
+  uri::join (base.as_parts (base_auth), reference.as_parts (reference_auth),
+             strict);
+}
+FUZZ_TEST (UriJoinFuzz, UriJoinNeverCrashes);
+#endif
+
 // NOLINTNEXTLINE
 TEST (UriCompose, Empty) {
   uri::parts p;
@@ -1576,9 +1639,10 @@ TEST (UriCompose, Scheme) {
 // NOLINTNEXTLINE
 TEST (UriCompose, Authority) {
   uri::parts p;
-  p.authority.userinfo = "username";
-  p.authority.host = "host";
-  p.authority.port = "123";
+  p.authority.emplace ();
+  p.authority->userinfo = "username";
+  p.authority->host = "host";
+  p.authority->port = "123";
   auto const expected = "//username@host:123"sv;
   EXPECT_EQ (uri::compose (p), expected);
   EXPECT_EQ (uri::split (expected), p);
@@ -1620,3 +1684,207 @@ TEST (UriCompose, Fragment) {
   EXPECT_EQ (uri::compose (p), expected);
   EXPECT_EQ (uri::split (expected), p);
 }
+TEST (UriCompose, EmptyStrings) {
+  uri::parts p;
+  p.authority.emplace ();
+  p.authority->userinfo = "";
+  p.authority->host = "foo.com";
+  p.authority->port = "";
+  p.path.segments.emplace_back ("segment");
+  p.query = "";
+  p.fragment = "";
+  std::string const& c = uri::compose (p);
+  auto const& p2 = uri::split (c);
+  ASSERT_TRUE (p2);
+  EXPECT_EQ (p, *p2);
+}
+
+#if URI_FUZZTEST
+static void SplitComposeEqual (std::string const& s) {
+  auto const& p = uri::split (s);
+  if (p) {
+    std::string const& s2 = uri::compose (*p);
+    EXPECT_EQ (s2, s);
+  }
+}
+FUZZ_TEST (UriCompose, SplitComposeEqual);
+#endif  // URI_FUZZTEST
+
+#if 0
+template <typename T>
+class ro_sink_container {
+public:
+  using value_type = T;
+
+  void push_back (T const & ) { ++size_; }
+  void push_back (T && ) { ++size_; }
+  std::size_t size () const noexcept { return size_; }
+  bool empty () const noexcept { return size_ == 0; }
+
+private:
+  std::size_t size_ = 0;
+};
+
+static std::size_t pct_encoded_size (std::string_view s) {
+  if (!uri::needs_pctencode (std::begin (s), std::end (s))) {
+    return 0;
+  }
+  ro_sink_container<char> c;
+  uri::pctencode (std::begin(s), std::end (s), std::back_inserter (c));
+  return c.size ();
+}
+static std::size_t pct_decoded_size (std::string_view s) {
+  if (!uri::needs_pctdecode (std::begin (s), std::end (s))) {
+    return 0;
+  }
+  auto b = uri::pctdecode_begin(s);
+  using difference_type = std::iterator_traits<decltype(b)>::difference_type;
+  auto dist = std::distance (b, uri::pctdecode_end (s));
+  assert (dist >= 0);
+  return static_cast<std::size_t> (std::max (dist, difference_type{0}));
+}
+
+struct bits {
+  unsigned scheme : 1;
+  unsigned userinfo : 1;
+  unsigned host : 1;
+  unsigned port : 1;
+  unsigned query : 1;
+  unsigned fragment : 1;
+};
+
+template <typename Function>
+void parts_strings (uri::parts & p, Function f) {
+  if (p.scheme.has_value ()) {
+    *p.scheme = f(*p.scheme);
+  }
+  for (auto & segment: p.path.segments) {
+    segment = f(segment);
+  }
+  if (p.authority.has_value()) {
+    auto & auth = *p.authority;
+    if (auth.userinfo.has_value ()) {
+      *auth.userinfo = f (*auth.userinfo);
+    }
+    auth.host = f (auth.host);
+    if (auth.port.has_value ()) {
+      *auth.port = f (*auth.port);
+    }
+  }
+  if (p.query.has_value ()) {
+    *p.query = f (*p.query);
+  }
+  if (p.fragment.has_value ()) {
+    *p.fragment = f (*p.fragment);
+  }
+}
+
+static uri::parts encode (std::vector<char> & store, uri::parts const & p) {
+  uri::parts result = p;
+  store.clear ();
+
+  std::size_t size = 0;
+  parts_strings (result, [&size] (std::string_view s) { size += pct_encoded_size (s); return s; });
+  store.reserve (size);
+  parts_strings (result, [&store] (std::string_view s) {
+    if (!uri::needs_pctencode (std::begin (s), std::end (s))) {
+      return s;
+    }
+    auto first = std::end (store);
+    uri::pctencode (std::begin(s), std::end (s), std::back_inserter (store));
+    auto last = std::end (store);
+    assert (std::distance (first, last) > 0);
+    return std::string_view{first, last};
+  });
+  assert (store.size () == size);
+  return result;
+}
+
+static uri::parts decode (std::vector<char> & store, uri::parts const & p) {
+  uri::parts result = p;
+  store.clear ();
+
+  std::size_t size = 0;
+  parts_strings (result, [&size] (std::string_view s) { size += pct_decoded_size (s); return s; });
+  store.reserve (size);
+  parts_strings (result, [&store] (std::string_view s) {
+    if (!uri::needs_pctdecode (std::begin (s), std::end (s))) {
+      return s;
+    }
+    auto first = std::end (store);
+    std::copy (uri::pctdecode_begin (s), uri::pctdecode_end (s), std::back_inserter (store));
+    auto last = std::end (store);
+    assert (std::distance (first, last) > 0);
+    return std::string_view{first, last};
+  });
+  assert (store.size () == size);
+  return result;
+}
+
+using osv = std::optional<std::string_view>;
+static void ComposeSplitEqual (osv const & scheme, std::vector<std::string> const & segments, bool has_authority, osv userinfo, std::string_view host, osv port, osv query, osv fragment) {
+  uri::parts p;
+  p.scheme = scheme;
+  p.path.absolute = true;
+  std::copy (std::begin (segments), std::end (segments), std::back_inserter (p.path.segments));
+  //  p.path.segments = segments;
+  if (has_authority) {
+    p.authority.emplace (userinfo, host, port);
+  }
+  p.query = query;
+  p.fragment = fragment;
+
+  std::vector<char> encoded_store;
+  uri::parts encoded_parts = encode (encoded_store, p);
+  std::string const & c = uri::compose(encoded_parts);
+  auto const & p2 = uri::split (c);
+
+  ASSERT_TRUE (p2) << "Can't split string " << c;
+  std::vector<char> decoded_store;
+  uri::parts decoded_parts = decode (decoded_store, *p2);
+  decoded_parts.path.absolute = true;
+
+
+  EXPECT_EQ (p.scheme, decoded_parts.scheme);
+  EXPECT_EQ (p.path.absolute, decoded_parts.path.absolute);
+  EXPECT_EQ (p.path.segments, decoded_parts.path.segments) << "From input " << encoded_parts << " to " << *p2;
+  EXPECT_EQ (p.authority.has_value(), decoded_parts.authority.has_value());
+  if (p.authority && decoded_parts.authority) {
+    EXPECT_EQ (p.authority->userinfo, decoded_parts.authority->userinfo);
+    EXPECT_EQ (p.authority->host, decoded_parts.authority->host);
+    EXPECT_EQ (p.authority->port, decoded_parts.authority->port);
+  }
+  EXPECT_EQ (p.query, decoded_parts.query);
+  EXPECT_EQ (p.fragment, decoded_parts.fragment);
+  //EXPECT_EQ (p, decoded_parts);
+}
+
+static auto NonEmptyString () {
+  using fuzztest::StringOf;
+  using fuzztest::OneOf;
+  using fuzztest::PrintableAsciiChar;
+
+  return StringOf(OneOf(PrintableAsciiChar()));
+}
+using fuzztest::OptionalOf;
+using fuzztest::ContainerOf;
+using fuzztest::Arbitrary;
+using fuzztest::AsciiString;
+using fuzztest::StringOf;
+using fuzztest::NumericChar;
+using fuzztest::VectorOf;
+using fuzztest::PrintableAsciiString;
+using fuzztest::InRegexp;
+
+FUZZ_TEST (UriCompose, ComposeSplitEqual)
+  .WithDomains (
+		OptionalOf(InRegexp("[a-zA-Z][a-zA-Z0-9+-.]*")), // scheme  ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )
+		VectorOf(NonEmptyString()), //segments
+		Arbitrary<bool>(),
+		OptionalOf(PrintableAsciiString()), // userinfo
+		AsciiString(), // host
+		OptionalOf(StringOf(NumericChar())), //port
+		OptionalOf(Arbitrary<std::string_view>()), //query
+		OptionalOf(Arbitrary<std::string_view>()) // fragment
+    );
+#endif

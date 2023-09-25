@@ -319,7 +319,12 @@ auto host_rule (uri::parts& result) {
           return r1.alternative (ip_literal, ipv4address, reg_name)
             .matched ("IP-literal / IPv4address / reg-name", r1);
         },
-        [&result] (std::string_view host) { result.authority.host = host; })
+        [&result] (std::string_view host) {
+          if (!result.authority) {
+            result.authority.emplace ();
+          }
+          result.authority->host = host;
+        })
       .matched ("host", r);
   };
 }
@@ -330,7 +335,10 @@ auto userinfo_at (uri::parts& result) {
     return r
       .concat (userinfo,
                [&result] (std::string_view const userinfo) {
-                 result.authority.userinfo = userinfo;
+                 if (!result.authority) {
+                   result.authority.emplace ();
+                 }
+                 result.authority->userinfo = userinfo;
                })
       .concat (commercial_at)
       .matched ("userinfo \"@\"", r);
@@ -346,8 +354,13 @@ auto colon_port (uri::parts& result) {
   // colon-port = ":" port
   return [&result] (rule const& r) {
     return r.concat (colon)
-      .concat (port, [&result] (
-                       std::string_view const p) { result.authority.port = p; })
+      .concat (port,
+               [&result] (std::string_view const p) {
+                 if (!result.authority) {
+                   result.authority.emplace ();
+                 }
+                 result.authority->port = p;
+               })
       .matched ("\":\" port", r);
   };
 }
@@ -631,11 +644,11 @@ auto absolute_URI (uri::parts& result) {
 /// \param base  The base URL.
 /// \param ref  A relative-path reference.
 /// \result  The merged path.
-uri::path merge (uri::parts const& base, uri::parts const& ref) {
+struct uri::parts::path merge (uri::parts const& base, uri::parts const& ref) {
   // If the base URI has a defined authority component and an empty path, then
   // return a path consisting of "/" concatenated with the reference's path
   if (base.authority && base.path.empty ()) {
-    uri::path r1;
+    struct uri::parts::path r1;
     r1.absolute = true;
     r1.segments = ref.path.segments;
     return r1;
@@ -643,7 +656,7 @@ uri::path merge (uri::parts const& base, uri::parts const& ref) {
 
   // Return a path consisting of the reference's path component appended to all
   // but the last segment of the base URI's path.
-  uri::path r2;
+  struct uri::parts::path r2;
   r2.absolute = base.path.absolute;
 
   auto last = std::end (base.path.segments);
@@ -660,13 +673,17 @@ uri::path merge (uri::parts const& base, uri::parts const& ref) {
 
 namespace uri {
 
+bool parts::path::operator== (path const& rhs) const {
+  return absolute == rhs.absolute && segments == rhs.segments;
+}
+
 // remove dot segments
 // ~~~~~~~~~~~~~~~~~~~
 // This function removes the special "." and ".." complete path segments from a
 // referenced path. An implementation of the algorithm in RFC 3986,
 // section 5.2.4 "Remove Dot Segments"
 // (http://tools.ietf.org/html/rfc3986#section-5.2.4).
-void path::remove_dot_segments () {
+void parts::path::remove_dot_segments () {
   auto const begin = std::begin (this->segments);
   auto const end = std::end (this->segments);
   auto outit = begin;
@@ -703,7 +720,7 @@ void path::remove_dot_segments () {
   }
 }
 
-path::operator std::string () const {
+parts::path::operator std::string () const {
   std::string p;
   auto const* separator = absolute ? "/" : "";
   for (auto const& seg : segments) {
@@ -714,7 +731,7 @@ path::operator std::string () const {
   return p;
 }
 
-path::operator std::filesystem::path () const {
+parts::path::operator std::filesystem::path () const {
   std::filesystem::path p;
   if (absolute) {
     p /= "/";
@@ -725,8 +742,30 @@ path::operator std::filesystem::path () const {
   return p;
 }
 
+bool parts::authority::operator== (authority const& rhs) const {
+  return userinfo == rhs.userinfo && host == rhs.host && port == rhs.port;
+}
+
+bool parts::operator== (parts const& rhs) const {
+  if (scheme != rhs.scheme || authority != rhs.authority ||
+      query != rhs.query || fragment != rhs.fragment) {
+    return false;
+  }
+
+  if (this->authority && rhs.authority) {
+    // Ignore the 'absolute' field. Both are implicitly absolute paths.
+    if (path.segments != rhs.path.segments) {
+      return false;
+    }
+  } else {
+    if (path != rhs.path) {
+      return false;
+    }
+  }
+  return true;
+}
+
 std::optional<parts> split (std::string_view const in) {
-  // URI-reference = URI / relative-ref
   if (parts result;
       rule{in}.alternative (URI (result), URI_reference (result)).done ()) {
     return result;
@@ -734,17 +773,20 @@ std::optional<parts> split (std::string_view const in) {
   return {};
 }
 
-std::ostream& operator<< (std::ostream& os, authority const& auth) {
-  if (auth.userinfo) {
+std::ostream& operator<< (std::ostream& os,
+                          struct parts::authority const& auth) {
+  if (auth.userinfo.has_value ()) {
     os << *auth.userinfo << "@";
   }
-  if (auth.host) {
-    os << *auth.host;
-  }
-  if (auth.port) {
+  os << auth.host;
+  if (auth.port.has_value ()) {
     os << ':' << *auth.port;
   }
   return os;
+}
+
+std::ostream& operator<< (std::ostream& os, struct parts::path const& path) {
+  return os << static_cast<std::string> (path);
 }
 
 // join
@@ -760,7 +802,7 @@ std::ostream& operator<< (std::ostream& os, authority const& auth) {
 parts join (parts const& base, parts const& reference, bool strict) {
   // In "non-strict" mode we ignore a scheme in the reference if it is identical
   // to the base URI's scheme.
-  std::optional<std::string> empty;
+  std::optional<std::string_view> empty;
   auto const * ref_scheme = &reference.scheme;
   if (!strict && reference.scheme == base.scheme) {
     ref_scheme = &empty;
@@ -816,13 +858,18 @@ std::optional<parts> join (std::string_view base, std::string_view reference,
 }
 
 std::ostream& compose (std::ostream& os, parts const& p) {
+  // assert (!p.authority || p.path.absolute);
+
   if (p.scheme) {
     os << *p.scheme << ':';
   }
   if (p.authority) {
-    os << "//" << p.authority;
+    os << "//" << *p.authority;
+    if (!p.path.empty () && !p.path.absolute) {
+      os << '/';
+    }
   }
-  os << static_cast<std::string> (p.path);
+  os << p.path;
   if (p.query) {
     os << '?' << *p.query;
   }
