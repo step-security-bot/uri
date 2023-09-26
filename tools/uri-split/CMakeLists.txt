@@ -23,7 +23,7 @@ if (TARGET gtest)
   add_custom_command (
     TARGET uri-split
     PRE_LINK
-    COMMAND "$<TARGET_FILE:${URI_TEST_TARGET}"
+    COMMAND "$<TARGET_FILE:${URI_TEST_TARGET}>"
             "--gtest_output=xml:${URI_OUT_XML}"
     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
     COMMENT "Running unit tests" DEPENDS ${URI_TEST_TARGET}
