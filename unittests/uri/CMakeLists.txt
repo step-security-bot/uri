@@ -22,15 +22,16 @@ add_executable (unittest
 target_link_libraries (unittest PUBLIC uri)
 
 setup_target (unittest)
-set (clang_options -Wno-global-constructors -Wno-used-but-marked-unused)
-set (gcc_options)
-set (msvc_options -wd4702) # unreachable code.
 target_compile_options (
   unittest
   PRIVATE
-    $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:${clang_options}>
-    $<$<CXX_COMPILER_ID:GNU>:${gcc_options}>
-    $<$<CXX_COMPILER_ID:MSVC>:${msvc_options}>
+    $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:
+      -Wno-global-constructors
+      -Wno-used-but-marked-unused>
+    $<$<CXX_COMPILER_ID:GNU>:>
+    # -wd4702 : unreachable code.
+    $<$<CXX_COMPILER_ID:MSVC>:
+      -wd4702>
 )
 
 if (URI_FUZZTEST)

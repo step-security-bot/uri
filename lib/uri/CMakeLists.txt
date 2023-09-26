@@ -13,16 +13,16 @@
 # SPDX-License-Identifier: MIT
 #
 #===----------------------------------------------------------------------===//
-set (include_dir "${URI_ROOT}/include")
+set (URI_INCLUDE_DIR "${URI_ROOT}/include")
 add_library (uri STATIC
-    "${include_dir}/uri/pctdecode.hpp"
-    "${include_dir}/uri/pctencode.hpp"
-    "${include_dir}/uri/rule.hpp"
-    "${include_dir}/uri/uri.hpp"
+    "${URI_INCLUDE_DIR}/uri/pctdecode.hpp"
+    "${URI_INCLUDE_DIR}/uri/pctencode.hpp"
+    "${URI_INCLUDE_DIR}/uri/rule.hpp"
+    "${URI_INCLUDE_DIR}/uri/uri.hpp"
     rule.cpp
     uri.cpp
 )
 setup_target (uri)
 target_include_directories (
-  uri PUBLIC $<BUILD_INTERFACE:${include_dir}> $<INSTALL_INTERFACE:uri>
+  uri PUBLIC $<BUILD_INTERFACE:${URI_INCLUDE_DIR}> $<INSTALL_INTERFACE:uri>
 )

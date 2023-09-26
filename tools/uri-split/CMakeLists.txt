@@ -18,16 +18,16 @@ setup_target (uri-split)
 target_link_libraries (uri-split PUBLIC uri)
 
 if (TARGET gtest)
-  set (prelink_target uri-split)
-  set (test_target unittest)
-  set (out_xml "${CMAKE_BINARY_DIR}/${test_target}.xml")
+  set (URI_TEST_TARGET unittest)
+  set (URI_OUT_XML "${CMAKE_BINARY_DIR}/${test_target}.xml")
   add_custom_command (
-    TARGET ${prelink_target}
+    TARGET uri-split
     PRE_LINK
-    COMMAND "$<TARGET_FILE:${test_target}>" "--gtest_output=xml:${out_xml}"
+    COMMAND "$<TARGET_FILE:${URI_TEST_TARGET}"
+            "--gtest_output=xml:${URI_OUT_XML}"
     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
-    COMMENT "Running unit tests" DEPENDS ${test_target}
-    BYPRODUCTS ${out_xml}
+    COMMENT "Running unit tests" DEPENDS ${URI_TEST_TARGET}
+    BYPRODUCTS "${CMAKE_BINARY_DIR}/${URI_OUT_XML}"
     VERBATIM
   )
-endif ()
+endif (TARGET gtest)

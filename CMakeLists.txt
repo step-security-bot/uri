@@ -33,8 +33,9 @@ endif (URI_LIBCXX)
 
 include (CheckCXXCompilerFlag)
 
+# Configure the named target with a standard set of options which enable lots
+# of warnings, select the desired language standard, and so on.
 function (setup_target target)
-
   set (
     clang_options
     -Weverything
@@ -46,7 +47,7 @@ function (setup_target target)
     -Wno-padded
     -Wno-undef
     -Wno-weak-vtables
-    )
+  )
   set (gcc_options -Wall -Wextra -pedantic -Wno-maybe-uninitialized)
   set (
     msvc_options
@@ -96,19 +97,20 @@ function (setup_target target)
                CXX_EXTENSIONS No
   )
 
+  set (is_clang $<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>)
   target_compile_options (
     ${target}
     PRIVATE
-      $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:${clang_options}>
+      $<${is_clang}>:${clang_options}>
       $<$<CXX_COMPILER_ID:GNU>:${gcc_options}>
       $<$<CXX_COMPILER_ID:MSVC>:${msvc_options}>
   )
   target_link_options (
     ${target}
     PRIVATE
-    $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:${clang_options}>
-    $<$<CXX_COMPILER_ID:GNU>:${gcc_options}>
-    $<$<CXX_COMPILER_ID:MSVC>:>
+      $<${is_clang}>:${clang_options}>
+      $<$<CXX_COMPILER_ID:GNU>:${gcc_options}>
+      $<$<CXX_COMPILER_ID:MSVC>:>
   )
   if (URI_FUZZTEST)
     target_compile_definitions (${target} PUBLIC URI_FUZZTEST=1)
@@ -118,8 +120,8 @@ function (setup_target target)
 
 endfunction (setup_target)
 
+# Configure the Google Test targets for our build.
 function (setup_gtest)
-
   if (EXISTS "${URI_ROOT}/googletest/CMakeLists.txt")
     # Tell gtest to link against the "Multi-threaded Debug DLL runtime library"
     # on Windows.
@@ -129,6 +131,19 @@ function (setup_gtest)
     set (INSTALL_GMOCK Off CACHE BOOL "Disable gmock install")
     add_subdirectory ("${URI_ROOT}/googletest")
 
+    set (gclangopts )
+    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang$")
+      check_cxx_compiler_flag (
+        -Wno-implicit-int-float-conversion
+        CLANG_W_NO_IMPLICIT_INT_FLOAT_CONVERSION
+      )
+      if (${CLANG_W_NO_IMPLICIT_INT_FLOAT_CONVERSION})
+        list (APPEND gclangopts -Wno-implicit-int-float-conversion)
+      endif ()
+    endif ()
+
+    set (is_clang $<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>)
+
     # Adjust compiler options for the gtest/gmock.
     foreach (target gtest gmock gmock_main gtest_main)
       set_target_properties (
@@ -137,46 +152,28 @@ function (setup_gtest)
                    CXX_STANDARD_REQUIRED Yes
                    CXX_EXTENSIONS No
       )
-
-      if (CMAKE_CXX_COMPILER_ID MATCHES "Clang$")
-        check_cxx_compiler_flag (
-          -Wno-implicit-int-float-conversion
-          CLANG_W_NO_IMPLICIT_INT_FLOAT_CONVERSION
-        )
-        if (${CLANG_W_NO_IMPLICIT_INT_FLOAT_CONVERSION})
-          list (APPEND gclang_options -Wno-implicit-int-float-conversion)
-        endif ()
-      endif ()
-
       target_compile_definitions (
         ${target} PUBLIC GTEST_REMOVE_LEGACY_TEST_CASEAPI_=1
       )
-      target_compile_options (
-        ${target}
-        PRIVATE
-          $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:${gclang_options}>
-      )
-      target_link_options (
-        ${target}
-        PRIVATE
-        $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:${gclang_options}>
-      )
+      target_compile_options (${target} PRIVATE $<${is_clang}>:${gclangopts}>)
+      target_link_options (${target} PRIVATE $<${is_clang}>:${gclangopts}>)
     endforeach ()
   endif ()
 
 endfunction (setup_gtest)
 
-
-
 set (URI_ROOT "${CMAKE_CURRENT_SOURCE_DIR}")
 add_subdirectory (lib)
-
 
 if (URI_FUZZTEST)
   include(FetchContent)
   set(FUZZTEST_REPO_BRANCH "main" CACHE STRING "FuzzTest repository branch.")
   message("Building fuzztest at branch " ${FUZZTEST_REPO_BRANCH})
-  FetchContent_Declare(fuzztest GIT_REPOSITORY https://github.com/google/fuzztest.git GIT_TAG ${FUZZTEST_REPO_BRANCH})
+  FetchContent_Declare(
+    fuzztest
+    GIT_REPOSITORY https://github.com/google/fuzztest.git
+    GIT_TAG ${FUZZTEST_REPO_BRANCH}
+  )
   FetchContent_MakeAvailable(fuzztest)
   enable_testing()
   include(GoogleTest)
