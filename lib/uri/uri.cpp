@@ -903,21 +903,21 @@ std::optional<parts> join (std::string_view base, std::string_view reference,
 std::ostream& compose (std::ostream& os, parts const& p) {
   // assert (!p.authority || p.path.absolute);
 
-  if (p.scheme && p.scheme) {
-    os << *p.scheme << ':';
+  if (p.scheme.has_value ()) {
+    os << p.scheme.value () << ':';
   }
-  if (p.authority) {
-    os << "//" << *p.authority;
+  if (p.authority.has_value ()) {
+    os << "//" << p.authority.value ();
     if (!p.path.empty () && !p.path.absolute) {
       os << '/';
     }
   }
   os << p.path;
-  if (p.query) {
-    os << '?' << *p.query;
+  if (p.query.has_value ()) {
+    os << '?' << p.query.value ();
   }
-  if (p.fragment) {
-    os << '#' << *p.fragment;
+  if (p.fragment.has_value ()) {
+    os << '#' << p.fragment.value ();
   }
   return os;
 }

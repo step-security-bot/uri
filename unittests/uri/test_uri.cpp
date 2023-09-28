@@ -1741,7 +1741,7 @@ static std::size_t pct_encoded_size (std::string_view s) {
 template <typename Function>
 void parts_strings (uri::parts & p, Function f) {
   if (p.scheme.has_value ()) {
-    *p.scheme = f(*p.scheme);
+    p.scheme = f (*p.scheme);
   }
   for (auto & segment: p.path.segments) {
     segment = f(segment);
@@ -1749,18 +1749,18 @@ void parts_strings (uri::parts & p, Function f) {
   if (p.authority.has_value()) {
     auto & auth = *p.authority;
     if (auth.userinfo.has_value ()) {
-      *auth.userinfo = f (*auth.userinfo);
+      auth.userinfo = f (*auth.userinfo);
     }
     auth.host = f (auth.host);
     if (auth.port.has_value ()) {
-      *auth.port = f (*auth.port);
+      auth.port = f (*auth.port);
     }
   }
   if (p.query.has_value ()) {
-    *p.query = f (*p.query);
+    p.query = f (*p.query);
   }
   if (p.fragment.has_value ()) {
-    *p.fragment = f (*p.fragment);
+    p.fragment = f (*p.fragment);
   }
 }
 
