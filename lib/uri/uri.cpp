@@ -74,6 +74,7 @@ auto userinfo (rule const& r) {
     })
     .matched ("userinfo", r);
 }
+constexpr auto userinfofn = userinfo;
 
 // scheme = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )
 auto scheme (rule const& r) {
@@ -84,6 +85,7 @@ auto scheme (rule const& r) {
     })
     .matched ("scheme", r);
 }
+constexpr auto schemefn = scheme;
 
 // reg-name      = *( unreserved / pct-encoded / sub-delims )
 auto reg_name (rule const& r) {
@@ -307,21 +309,19 @@ auto ip_literal (rule const& r) {
     .matched ("IP-literal", r);
 }
 
+// host          = IP-literal / IPv4address / reg-name
+auto hostfn (rule const& r) {
+  return r.alternative (ip_literal, ipv4address, reg_name)
+    .matched ("IP-literal / IPv4address / reg-name", r);
+}
+
 auto host_rule (uri::parts& result) {
-  // host          = IP-literal / IPv4address / reg-name
   return [&result] (rule const& r) {
     return r
-      .concat (
-        [] (rule const& r1) {
-          return r1.alternative (ip_literal, ipv4address, reg_name)
-            .matched ("IP-literal / IPv4address / reg-name", r1);
-        },
-        [&result] (std::string_view host) {
-          if (!result.authority) {
-            result.authority.emplace ();
-          }
-          result.authority->host = host;
-        })
+      .concat (hostfn,
+               [&result] (std::string_view host) {
+                 result.ensure_authority ().host = host;
+               })
       .matched ("host", r);
   };
 }
@@ -332,10 +332,7 @@ auto userinfo_at (uri::parts& result) {
     return r
       .concat (userinfo,
                [&result] (std::string_view const userinfo) {
-                 if (!result.authority) {
-                   result.authority.emplace ();
-                 }
-                 result.authority->userinfo = userinfo;
+                 result.ensure_authority ().userinfo = userinfo;
                })
       .concat (commercial_at)
       .matched ("userinfo \"@\"", r);
@@ -346,6 +343,7 @@ auto userinfo_at (uri::parts& result) {
 auto port (rule const& r) {
   return r.star (digit).matched ("port", r);
 }
+constexpr auto portfn = port;
 
 auto colon_port (uri::parts& result) {
   // colon-port = ":" port
@@ -353,10 +351,7 @@ auto colon_port (uri::parts& result) {
     return r.concat (colon)
       .concat (port,
                [&result] (std::string_view const p) {
-                 if (!result.authority) {
-                   result.authority.emplace ();
-                 }
-                 result.authority->port = p;
+                 result.ensure_authority ().port = p;
                })
       .matched ("\":\" port", r);
   };
@@ -532,6 +527,8 @@ auto query (rule const& r) {
     })
     .matched ("query", r);
 }
+constexpr auto queryfn = query;
+
 // question-query = "?" query
 auto question_query (uri::parts& result) {
   return [&result] (rule const& r) {
@@ -547,6 +544,7 @@ auto question_query (uri::parts& result) {
 auto fragment (rule const& r) {
   return query (r);
 }
+constexpr auto fragmentfn = fragment;
 
 // hash-fragment = "#" fragment
 auto hash_fragment (uri::parts& result) {
@@ -579,6 +577,11 @@ auto relative_ref (uri::parts& result) {
       .matched ("relative-ref", r);
   };
 }
+
+// relative-part = auth-abempty
+//               / path-absolute
+//               / path-noscheme
+//               / path-empty
 
 // hier-part     = auth-abempty
 //               / path-absolute
@@ -739,8 +742,51 @@ parts::path::operator std::filesystem::path () const {
   return p;
 }
 
+bool parts::path::valid () const noexcept {
+  for (auto const& seg : segments) {
+    if (!rule{seg}.concat (segment).done ()) {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool parts::authority::operator== (authority const& rhs) const {
   return userinfo == rhs.userinfo && host == rhs.host && port == rhs.port;
+}
+
+bool parts::authority::valid () const noexcept {
+  if (userinfo.has_value () &&
+      !rule{userinfo.value ()}.concat (userinfofn).done ()) {
+    return false;
+  }
+  if (!rule{host}.concat (hostfn).done ()) {
+    return false;
+  }
+  if (port.has_value () && !rule{port.value ()}.concat (portfn).done ()) {
+    return false;
+  }
+  return true;
+}
+
+bool parts::valid () const noexcept {
+  if (scheme.has_value () && !rule{scheme.value ()}.concat (schemefn).done ()) {
+    return false;
+  }
+  if (authority.has_value () && !authority->valid ()) {
+    return false;
+  }
+  if (!path.valid ()) {
+    return false;
+  }
+  if (query.has_value () && !rule{query.value ()}.concat (queryfn).done ()) {
+    return false;
+  }
+  if (fragment.has_value () &&
+      !rule{fragment.value ()}.concat (fragmentfn).done ()) {
+    return false;
+  }
+  return true;
 }
 
 bool parts::operator== (parts const& rhs) const {
@@ -857,7 +903,7 @@ std::optional<parts> join (std::string_view base, std::string_view reference,
 std::ostream& compose (std::ostream& os, parts const& p) {
   // assert (!p.authority || p.path.absolute);
 
-  if (p.scheme) {
+  if (p.scheme && p.scheme) {
     os << *p.scheme << ':';
   }
   if (p.authority) {

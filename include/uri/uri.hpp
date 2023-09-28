@@ -32,6 +32,7 @@ struct parts {
     // Remove dot segments from the path.
     void remove_dot_segments ();
     [[nodiscard]] bool empty () const noexcept { return segments.empty (); }
+    [[nodiscard]] bool valid () const noexcept;
     explicit operator std::string () const;
     explicit operator std::filesystem::path () const;
     bool operator== (path const& rhs) const;
@@ -41,6 +42,8 @@ struct parts {
     std::optional<std::string_view> userinfo;
     std::string_view host;
     std::optional<std::string_view> port;
+
+    [[nodiscard]] bool valid () const noexcept;
 
     bool operator== (authority const& rhs) const;
     bool operator!= (authority const& rhs) const { return !operator== (rhs); }
@@ -52,10 +55,13 @@ struct parts {
   std::optional<std::string_view> query;
   std::optional<std::string_view> fragment;
 
-  [[nodiscard]] constexpr bool valid () const noexcept {
-    return !authority || path.absolute;
-  }
+  [[nodiscard]] bool valid () const noexcept;
 
+  /// If an authority instance is present, return it otherwise an instance is
+  /// created and returned.
+  struct authority& ensure_authority () {
+    return authority.has_value () ? *authority : authority.emplace ();
+  }
   bool operator== (parts const& rhs) const;
   bool operator!= (parts const& rhs) const { return !operator== (rhs); }
 };

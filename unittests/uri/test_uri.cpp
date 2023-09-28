@@ -1598,7 +1598,6 @@ TEST_F (Join, Abnormal) {
   EXPECT_EQ (uri::split ("http:g"), uri::join (base_, "http:g"));
 }
 
-#if URI_FUZZTEST
 using authority = std::optional<struct uri::parts::authority>;
 struct parts_without_authority {
   std::optional<std::string> scheme;
@@ -1611,7 +1610,7 @@ struct parts_without_authority {
     return uri::parts{scheme, authority, path, query, fragment};
   }
 };
-
+#if URI_FUZZTEST
 static void UriJoinNeverCrashes (parts_without_authority const& base,
                                  authority const& base_auth,
                                  parts_without_authority const& reference,
@@ -1698,8 +1697,7 @@ TEST (UriCompose, EmptyStrings) {
 
 #if URI_FUZZTEST
 static void SplitComposeEqual (std::string const& s) {
-  auto const& p = uri::split (s);
-  if (p) {
+  if (auto const& p = uri::split (s)) {
     std::string const& s2 = uri::compose (*p);
     EXPECT_EQ (s2, s);
   }
@@ -1707,7 +1705,16 @@ static void SplitComposeEqual (std::string const& s) {
 FUZZ_TEST (UriCompose, SplitComposeEqual);
 #endif  // URI_FUZZTEST
 
-#if 0
+TEST (PartsValid, Scheme) {
+  uri::parts p;
+  EXPECT_TRUE (p.valid ());
+  p.scheme = "scheme";
+  EXPECT_TRUE (p.valid ());
+  p.scheme = "123";
+  EXPECT_FALSE (p.valid ());
+}
+
+#if URI_FUZZTEST
 template <typename T>
 class ro_sink_container {
 public:
@@ -1730,25 +1737,6 @@ static std::size_t pct_encoded_size (std::string_view s) {
   uri::pctencode (std::begin(s), std::end (s), std::back_inserter (c));
   return c.size ();
 }
-static std::size_t pct_decoded_size (std::string_view s) {
-  if (!uri::needs_pctdecode (std::begin (s), std::end (s))) {
-    return 0;
-  }
-  auto b = uri::pctdecode_begin(s);
-  using difference_type = std::iterator_traits<decltype(b)>::difference_type;
-  auto dist = std::distance (b, uri::pctdecode_end (s));
-  assert (dist >= 0);
-  return static_cast<std::size_t> (std::max (dist, difference_type{0}));
-}
-
-struct bits {
-  unsigned scheme : 1;
-  unsigned userinfo : 1;
-  unsigned host : 1;
-  unsigned port : 1;
-  unsigned query : 1;
-  unsigned fragment : 1;
-};
 
 template <typename Function>
 void parts_strings (uri::parts & p, Function f) {
@@ -1797,6 +1785,27 @@ static uri::parts encode (std::vector<char> & store, uri::parts const & p) {
   return result;
 }
 
+static void SplitAndValidAlwaysAgree (parts_without_authority const& base,
+                                      authority const& auth) {
+  std::vector<char> store;
+  uri::parts const p = encode (store, base.as_parts (auth));
+  std::string const str = uri::compose (p);
+  EXPECT_EQ (p.valid (), uri::split (str).has_value ());
+}
+FUZZ_TEST (UriPartsValid, SplitAndValidAlwaysAgree);
+#endif  // URI_FUZZTEST
+
+#if 0
+static std::size_t pct_decoded_size (std::string_view s) {
+  if (!uri::needs_pctdecode (std::begin (s), std::end (s))) {
+    return 0;
+  }
+  auto b = uri::pctdecode_begin(s);
+  using difference_type = std::iterator_traits<decltype(b)>::difference_type;
+  auto dist = std::distance (b, uri::pctdecode_end (s));
+  assert (dist >= 0);
+  return static_cast<std::size_t> (std::max (dist, difference_type{0}));
+}
 static uri::parts decode (std::vector<char> & store, uri::parts const & p) {
   uri::parts result = p;
   store.clear ();
