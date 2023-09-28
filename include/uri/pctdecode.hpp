@@ -6,12 +6,9 @@
 //* | .__/ \___|\__\__,_|\___|\___\___/ \__,_|\___| *
 //* |_|                                             *
 //===----------------------------------------------------------------------===//
-//
 // Distributed under the MIT License.
-// See https://github.com/paulhuggett/uri/blob/main/LICENSE.TXT
-// for license information.
+// See https://github.com/paulhuggett/uri/blob/main/LICENSE for information.
 // SPDX-License-Identifier: MIT
-//
 //===----------------------------------------------------------------------===//
 #ifndef URI_PCTDECODE_HPP
 #define URI_PCTDECODE_HPP

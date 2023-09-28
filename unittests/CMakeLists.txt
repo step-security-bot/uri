@@ -6,12 +6,9 @@
 #*  \____|_|  |_|\__,_|_|\_\___|_____|_|___/\__|___/ *
 #*                                                   *
 #===----------------------------------------------------------------------===//
-#
 # Distributed under the MIT License.
-# See https://github.com/paulhuggett/uri/blob/main/LICENSE.TXT
-# for license information.
+# See https://github.com/paulhuggett/uri/blob/main/LICENSE for information.
 # SPDX-License-Identifier: MIT
-#
 #===----------------------------------------------------------------------===//
 
 add_subdirectory (uri)

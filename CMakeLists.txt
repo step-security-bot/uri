@@ -6,12 +6,9 @@
 #*  \____|_|  |_|\__,_|_|\_\___|_____|_|___/\__|___/ *
 #*                                                   *
 #===----------------------------------------------------------------------===//
-#
 # Distributed under the MIT License.
-# See https://github.com/paulhuggett/uri/blob/main/LICENSE.TXT
-# for license information.
+# See https://github.com/paulhuggett/uri/blob/main/LICENSE for information.
 # SPDX-License-Identifier: MIT
-#
 #===----------------------------------------------------------------------===//
 cmake_minimum_required (VERSION 3.19)
 project (uri CXX)

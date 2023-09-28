@@ -7,12 +7,9 @@
 # *  \__\___||___/\__| *
 # *                    *
 # ===----------------------------------------------------------------------===//
-#
 #  Distributed under the MIT License.
-#  See https://github.com/paulhuggett/uri/blob/main/LICENSE.TXT
-#  for license information.
+#  See https://github.com/paulhuggett/uri/blob/main/LICENSE for information.
 #  SPDX-License-Identifier: MIT
-#
 # ===----------------------------------------------------------------------===//
 import argparse
 import sys

@@ -6,12 +6,9 @@
 //* |_|   \__,_|_|\___| *
 //*                     *
 //===----------------------------------------------------------------------===//
-//
 // Distributed under the MIT License.
-// See https://github.com/paulhuggett/uri/blob/main/LICENSE.TXT
-// for license information.
+// See https://github.com/paulhuggett/uri/blob/main/LICENSE for information.
 // SPDX-License-Identifier: MIT
-//
 //===----------------------------------------------------------------------===//
 /// \file rule.hpp
 /// \brief A class to aid in the implementation of ABNF grammars.
