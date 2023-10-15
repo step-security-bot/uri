@@ -30,7 +30,7 @@ enum code_points {
 
 namespace uri {
 
-bool needs_pctencode (std::uint8_t c, pctencode_set s) noexcept {
+bool needs_pctencode (std::uint_least8_t c, pctencode_set s) noexcept {
   static std::array<std::uint8_t const, 32> const encode{{
     0b0100'0000,  // U+0021 EXCLAMATION MARK
     0b0111'1111,  // U+0022 QUOTATION MARK

@@ -39,7 +39,7 @@ enum class pctencode_set : std::uint8_t {
 
 // An implementation of section 1.3 "Percent-encoded bytes"
 // https://url.spec.whatwg.org/#percent-encoded-bytes
-bool needs_pctencode (std::uint8_t c, pctencode_set s) noexcept;
+bool needs_pctencode (std::uint_least8_t c, pctencode_set s) noexcept;
 
 template <typename InputIterator>
 bool needs_pctencode (InputIterator first, InputIterator last,
@@ -53,7 +53,7 @@ OutputIterator pctencode (InputIterator first, InputIterator last,
                           OutputIterator out, pctencode_set encodeset) {
   for (; first != last; ++first) {
     auto c = *first;
-    if (needs_pctencode (c, encodeset)) {
+    if (needs_pctencode (static_cast<std::uint_least8_t> (c), encodeset)) {
       auto const cu = static_cast<std::make_unsigned_t<decltype (c)>> (c);
       *(out++) = '%';
       *(out++) = dec2hex ((cu >> 4) & 0xF);
