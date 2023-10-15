@@ -13,6 +13,7 @@
 #ifndef URI_PCTENCODE_HPP
 #define URI_PCTENCODE_HPP
 
+#include <algorithm>
 #include <array>
 #include <bitset>
 #include <cassert>
