@@ -24,6 +24,34 @@
 
 namespace uri {
 
+enum class code_points : char32_t {
+  null = 0x00,
+  tab = 0x09,
+  lf = 0x0A,
+  cr = 0x0D,
+  space = 0x20,
+  number_sign = 0x23,
+  solidus = 0x2F,
+  exclamation_mark = 0x21,
+  digit_zero = 0x30,
+  digit_nine = 0x39,
+  colon = 0x3A,
+  less_than_sign = 0x3C,
+  greater_than_sign = 0x3E,
+  question_mark = 0x3F,
+  commercial_at = 0x40,
+  latin_capital_letter_a = 0x41,
+  latin_capital_letter_z = 0x5A,
+  left_square_bracket = 0x5B,
+  reverse_solidus = 0x5C,
+  right_square_bracket = 0x5D,
+  circumflex_accent = 0x5E,
+  latin_small_letter_a = 0x61,
+  latin_small_letter_z = 0x7A,
+  vertical_line = 0x7C,
+  tilde = 0x7E,
+};
+
 struct parts {
   struct path {
     bool absolute = false;

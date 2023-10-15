@@ -14,7 +14,9 @@
 #define URI_PCTENCODE_HPP
 
 #include <array>
+#include <bitset>
 #include <cassert>
+#include <cstdint>
 #include <string>
 
 namespace uri {
@@ -24,42 +26,34 @@ constexpr char dec2hex (unsigned const v) noexcept {
   return static_cast<char> (v + ((v < 10) ? '0' : 'A' - 10));
 }
 
-// punctuation characters. This collection of characters is based on the "C"
-// locale's "printable" punctuation characters with the set of gen-delims and
-// sub-delims characters from the URI specification removed.
-template <typename ValueT>
-inline constexpr std::array<ValueT, 14> delims{
-  {'"', '-', '.', '<', '>', '\\', '^', '_', '`', '{', '|', '}', '~', ')'}};
+enum class pctencode_set : std::uint8_t {
+  fragment = 1U << 0U,
+  query = 1U << 1U,
+  special_query = 1U << 2U,
+  path = 1U << 3U,
+  userinfo = 1U << 4U,
+  component = 1U << 5U,
+  form_urlencoded =
+    1U << 6U,  ///< The application/x-www-form-urlencoded percent-encode set.
+};
 
-template <typename ValueT>
-constexpr bool isprint (ValueT const v) {
-  if (v >= '0' && v <= '9') {
-    return true;
-  }
-  if (v >= 'A' && v <= 'Z') {
-    return true;
-  }
-  if (v >= 'a' && v <= 'z') {
-    return true;
-  }
-  if (v == ' ') {
-    return true;
-  }
-  constexpr auto end = std::end (delims<ValueT>);
-  return std::find (std::begin (delims<ValueT>), end, v) != end;
-}
+// An implementation of section 1.3 "Percent-encoded bytes"
+// https://url.spec.whatwg.org/#percent-encoded-bytes
+bool needs_pctencode (std::uint8_t c, pctencode_set s) noexcept;
 
 template <typename InputIterator>
-bool needs_pctencode (InputIterator first, InputIterator last) {
-  return std::any_of (first, last, [] (auto c) { return !isprint (c); });
+bool needs_pctencode (InputIterator first, InputIterator last,
+                      pctencode_set s) {
+  return std::any_of (first, last,
+                      [s] (auto c) { return needs_pctencode (c, s); });
 }
 
 template <typename InputIterator, typename OutputIterator>
 OutputIterator pctencode (InputIterator first, InputIterator last,
-                          OutputIterator out) {
+                          OutputIterator out, pctencode_set encodeset) {
   for (; first != last; ++first) {
     auto c = *first;
-    if (!isprint (c)) {
+    if (needs_pctencode (c, encodeset)) {
       auto const cu = static_cast<std::make_unsigned_t<decltype (c)>> (c);
       *(out++) = '%';
       *(out++) = dec2hex ((cu >> 4) & 0xF);
@@ -70,10 +64,11 @@ OutputIterator pctencode (InputIterator first, InputIterator last,
   return out;
 }
 
-inline std::string pctencode (std::string_view s) {
+inline std::string pctencode (std::string_view s, pctencode_set encodeset) {
   std::string result;
   result.reserve (s.length ());
-  pctencode (std::begin (s), std::end (s), std::back_inserter (result));
+  pctencode (std::begin (s), std::end (s), std::back_inserter (result),
+             encodeset);
   return result;
 }
 

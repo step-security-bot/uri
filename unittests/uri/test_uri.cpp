@@ -1714,6 +1714,14 @@ TEST (PartsValid, Scheme) {
   EXPECT_FALSE (p.valid ());
 }
 
+TEST (PartsValid, AuthorityUserinfo) {
+  using authority = struct uri::parts::authority;
+  uri::parts p;
+  p.authority = authority{"userinfo"sv, "host"sv, std::nullopt};
+  EXPECT_TRUE (p.valid ());
+  EXPECT_EQ (p.valid (), uri::split (uri::compose (p)).has_value ());
+}
+
 #if URI_FUZZTEST
 template <typename T>
 class ro_sink_container {

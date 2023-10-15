@@ -16,6 +16,7 @@ add_library (uri STATIC
     "${URI_INCLUDE_DIR}/uri/pctencode.hpp"
     "${URI_INCLUDE_DIR}/uri/rule.hpp"
     "${URI_INCLUDE_DIR}/uri/uri.hpp"
+    pctencode.cpp
     rule.cpp
     uri.cpp
 )

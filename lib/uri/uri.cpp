@@ -309,11 +309,12 @@ auto ip_literal (rule const& r) {
     .matched ("IP-literal", r);
 }
 
-// host          = IP-literal / IPv4address / reg-name
-auto hostfn (rule const& r) {
+// host = IP-literal / IPv4address / reg-name
+auto host (rule const& r) {
   return r.alternative (ip_literal, ipv4address, reg_name)
     .matched ("IP-literal / IPv4address / reg-name", r);
 }
+constexpr auto hostfn = host;
 
 auto host_rule (uri::parts& result) {
   return [&result] (rule const& r) {
