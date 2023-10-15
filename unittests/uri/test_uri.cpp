@@ -1715,9 +1715,9 @@ TEST (PartsValid, Scheme) {
 }
 
 TEST (PartsValid, AuthorityUserinfo) {
-  using authority = struct uri::parts::authority;
+  using parts_authority = struct uri::parts::authority;
   uri::parts p;
-  p.authority = authority{"userinfo"sv, "host"sv, std::nullopt};
+  p.authority = parts_authority{"userinfo"sv, "host"sv, std::nullopt};
   EXPECT_TRUE (p.valid ());
   EXPECT_EQ (p.valid (), uri::split (uri::compose (p)).has_value ());
 }
