@@ -17,6 +17,7 @@
 #include <bitset>
 #include <cassert>
 #include <cstdint>
+#include <iterator>
 #include <string>
 
 namespace uri {
