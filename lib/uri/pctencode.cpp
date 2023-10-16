@@ -100,6 +100,7 @@ bool needs_pctencode (std::uint_least8_t c, pctencode_set es) noexcept {
   if (c >= encode.size ()) {
     return false;
   }
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
   return (encode[c] &
           static_cast<std::underlying_type_t<pctencode_set>> (es)) != 0U;
 }
