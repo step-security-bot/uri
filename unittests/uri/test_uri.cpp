@@ -1763,10 +1763,10 @@ class ro_sink_container {
 public:
   using value_type = T;
 
-  void push_back (T const & ) { ++size_; }
-  void push_back (T && ) { ++size_; }
-  std::size_t size () const noexcept { return size_; }
-  bool empty () const noexcept { return size_ == 0; }
+  void push_back (T const&) noexcept { ++size_; }
+  void push_back (T&&) noexcept { ++size_; }
+  [[nodiscard]] std::size_t size () const noexcept { return size_; }
+  [[nodiscard]] bool empty () const noexcept { return size_ == 0; }
 
 private:
   std::size_t size_ = 0;
