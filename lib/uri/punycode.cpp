@@ -26,7 +26,7 @@ constexpr std::uint_least32_t decode_digit (std::uint_least8_t cp) noexcept {
 
 // Decode a generalized variable-length integer.
 template <typename Iterator>
-std::variant<std::error_code, std::tuple<std::uint_least32_t, Iterator>>
+std::variant<std::error_code, std::tuple<std::string::size_type, Iterator>>
 decode_vli (Iterator first, Iterator last, std::string::size_type vli,
             std::string::size_type bias) {
   static constexpr auto maxint =
@@ -134,7 +134,7 @@ decode_result decode (std::string_view const& input) {
     i %= (output.length () + 1);
 
     // Insert n into the output at position i.
-    output.insert (i, std::string::size_type{1}, n);
+    output.insert (i, std::string::size_type{1}, static_cast<char32_t> (n));
     ++i;
   }
   return output;

@@ -46,8 +46,8 @@ constexpr auto tmin = 1U;
 constexpr auto tmax = 26U;
 constexpr auto skew = 38U;
 constexpr auto initial_bias = std::string::size_type{72};
-constexpr auto initial_n = char32_t{0x80};
-constexpr auto delimiter = char32_t{0x2D};
+constexpr auto initial_n = std::string::size_type{0x80};
+constexpr auto delimiter = char{0x2D};
 
 constexpr bool is_basic_code_point (char32_t c) noexcept {
   // return c >= 0x20 && c <= 0x7E;
