@@ -1836,6 +1836,7 @@ static uri::parts encode (std::vector<char> & store, uri::parts const & p) {
   return result;
 }
 
+// NOLINTNEXTLINE
 TEST (UriCompose, SplitAndValidAgree) {
   parts_without_authority base;
   authority auth;
