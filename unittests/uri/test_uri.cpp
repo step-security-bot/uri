@@ -1791,8 +1791,10 @@ static uri::parts encode (std::vector<char> & store, uri::parts const & p) {
     uri::pctencode (std::begin (s), std::end (s), std::back_inserter (store),
                     es);
     auto last = std::end (store);
-    assert (std::distance (first, last) > 0);
-    return std::string_view{first, last};
+    auto const dist = std::distance (first, last);
+    assert (dist > 0);
+    return std::string_view{to_address (first),
+                            static_cast<std::string_view::size_type> (dist)};
   });
   assert (store.size () == size);
   return result;
