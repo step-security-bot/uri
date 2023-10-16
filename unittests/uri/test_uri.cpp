@@ -16,11 +16,47 @@
 #include <algorithm>
 #include <numeric>
 
+#if __has_include(<version>)
+#include <version>
+#endif
+
 // google test
 #include "gmock/gmock.h"
 #if URI_FUZZTEST
 #include "fuzztest/fuzztest.h"
 #endif
+
+// to address
+// ~~~~~~~~~~
+#if defined(__cpp_lib_to_address)
+template <typename T>
+[[nodiscard]] constexpr auto to_address (T&& p) noexcept {
+  return std::to_address (std::forward<T> (p));
+}
+#else
+// True if std::pointer_traits<T>::to_address is available.
+template <typename T, typename = void>
+inline constexpr bool has_to_address = false;
+template <typename T>
+inline constexpr bool
+  has_to_address<T, std::void_t<decltype (std::pointer_traits<T>::to_address (
+                      std::declval<T const&> ()))>> = true;
+
+template <typename T>
+[[nodiscard]] constexpr T* to_address (T* const p) noexcept {
+  static_assert (!std::is_function_v<T>, "T must not be a function type");
+  return p;
+}
+template <typename T>
+[[nodiscard]] constexpr auto to_address (T&& p) noexcept {
+  using P = std::decay_t<T>;
+  if constexpr (has_to_address<P>) {
+    return std::pointer_traits<P>::to_address (std::forward<T> (p));
+  } else {
+    return to_address (p.operator->());
+  }
+}
+#endif  // defined(__cpp_lib_to_address)
 
 using testing::ElementsAre;
 using namespace std::string_view_literals;
