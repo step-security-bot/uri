@@ -82,7 +82,7 @@ TEST (PctEncode, CodePointNeedsEncodeExhaustive) {
   // The component percent-encode set is the userinfo percent-encode set and
   // U+0024 ($) to U+0026 (&), inclusive, U+002B (+), and U+002C (,).
   auto const is_component = [=] (std::uint8_t c) {
-    return is_userinfo (c) || c == 0x24 || c == 0x25 || c == 0x2C ||
+    return is_userinfo (c) || c == 0x24 || c == 0x25 || c == 0x26 ||
            c == 0x2B || c == 0x2C;
   };
   // The application/x-www-form-urlencoded percent-encode set is the component
