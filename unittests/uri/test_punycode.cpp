@@ -13,6 +13,10 @@
 #include "gtest/gtest.h"
 #include "uri/punycode.hpp"
 
+#if URI_FUZZTEST
+#include "fuzztest/fuzztest.h"
+#endif
+
 TEST (Punycode, Delimiter) {
   auto const orig = std::u32string{0x002C, 0x002D, 0x1BC0};
   auto const encoded = ",--9cr";
@@ -273,3 +277,16 @@ TEST (Punycode, ExampleS) {
   EXPECT_EQ (uri::punycode::decode (encoded),
              uri::punycode::decode_result{orig});
 }
+
+#if URI_FUZZTEST
+static void EncodeNeverCrashes (std::u32string const& s) {
+  std::string actual;
+  uri::punycode::encode (s, std::back_inserter (actual));
+}
+FUZZ_TEST (Punycode, EncodeNeverCrashes);
+
+static void DecodeNeverCrashes (std::string const& s) {
+  uri::punycode::decode (s);
+}
+FUZZ_TEST (Punycode, DecodeNeverCrashes);
+#endif  // URI_FUZZTEST
