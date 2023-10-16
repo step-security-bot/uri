@@ -116,15 +116,27 @@ TEST (PctEncode, CodePointNeedsEncodeExhaustive) {
 }
 
 #if URI_FUZZTEST
-static void pctencode_never_crashes (std::string const& s) {
+static void pctencode_never_crashes (std::string const& s,
+                                     uri::pctencode_set encodeset) {
   std::string encoded;
-  uri::pctencode (std::begin (s), std::end (s), std::back_inserter (encoded));
+  uri::pctencode (std::begin (s), std::end (s), std::back_inserter (encoded),
+                  encodeset);
 }
-FUZZ_TEST (PctEncodeFuzz, pctencode_never_crashes);
+static auto any_encode_set () {
+  return fuzztest::ElementOf<uri::pctencode_set> (
+    {uri::pctencode_set::fragment, uri::pctencode_set::query,
+     uri::pctencode_set::special_query, uri::pctencode_set::path,
+     uri::pctencode_set::userinfo, uri::pctencode_set::component,
+     uri::pctencode_set::form_urlencoded});
+}
+FUZZ_TEST (PctEncodeFuzz, pctencode_never_crashes)
+  .WithDomains (fuzztest::String (), any_encode_set ());
 
-static void pctcodec_equals_original (std::string const& s) {
+static void pctcodec_equals_original (std::string const& s,
+                                      uri::pctencode_set encodeset) {
   std::string encoded;
-  uri::pctencode (std::begin (s), std::end (s), std::back_inserter (encoded));
+  uri::pctencode (std::begin (s), std::end (s), std::back_inserter (encoded),
+                  encodeset);
 
   std::string out;
   std::copy (uri::pctdecode_begin (encoded), uri::pctdecode_end (encoded),
@@ -132,5 +144,6 @@ static void pctcodec_equals_original (std::string const& s) {
 
   EXPECT_THAT (out, testing::StrEq (s));
 }
-FUZZ_TEST (PctEncodeFuzz, pctcodec_equals_original);
+FUZZ_TEST (PctEncodeFuzz, pctcodec_equals_original)
+  .WithDomains (fuzztest::String (), any_encode_set ());
 #endif  // URI_FUZZTEST

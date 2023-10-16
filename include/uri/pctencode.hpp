@@ -29,6 +29,7 @@ constexpr char dec2hex (unsigned const v) noexcept {
 }
 
 enum class pctencode_set : std::uint8_t {
+  none = 0,
   fragment = 1U << 0U,
   query = 1U << 1U,
   special_query = 1U << 2U,
@@ -41,14 +42,16 @@ enum class pctencode_set : std::uint8_t {
 
 // An implementation of section 1.3 "Percent-encoded bytes"
 // https://url.spec.whatwg.org/#percent-encoded-bytes
-bool needs_pctencode (std::uint_least8_t c, pctencode_set s) noexcept;
+bool needs_pctencode (std::uint_least8_t c, pctencode_set es) noexcept;
 
 template <typename InputIterator>
 bool needs_pctencode (InputIterator first, InputIterator last,
-                      pctencode_set s) {
+                      pctencode_set es) {
   return std::any_of (first, last,
-                      [s] (auto c) { return needs_pctencode (c, s); });
+                      [es] (auto c) { return needs_pctencode (c, es); });
 }
+
+bool needs_pctencode (std::string_view s, pctencode_set es);
 
 template <typename InputIterator, typename OutputIterator>
 OutputIterator pctencode (InputIterator first, InputIterator last,

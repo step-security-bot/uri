@@ -30,7 +30,7 @@ enum code_points {
 
 namespace uri {
 
-bool needs_pctencode (std::uint_least8_t c, pctencode_set s) noexcept {
+bool needs_pctencode (std::uint_least8_t c, pctencode_set es) noexcept {
   static std::array<std::uint8_t const, 32> const encode{{
     0b0100'0000,  // U+0021 EXCLAMATION MARK
     0b0111'1111,  // U+0022 QUOTATION MARK
@@ -97,9 +97,17 @@ bool needs_pctencode (std::uint_least8_t c, pctencode_set s) noexcept {
     }
     c -= num_alpha;  // Lower-case letters are missing.
   }
-  assert (c < encode.size ());
-  return (encode[c] & static_cast<std::underlying_type_t<pctencode_set>> (s)) !=
-         0U;
+  if (c >= encode.size ()) {
+    return false;
+  }
+  return (encode[c] &
+          static_cast<std::underlying_type_t<pctencode_set>> (es)) != 0U;
+}
+
+bool needs_pctencode (std::string_view s, pctencode_set es) {
+  return std::any_of (std::begin (s), std::end (s), [es] (auto c) {
+    return needs_pctencode (static_cast<std::uint_least8_t> (c), es);
+  });
 }
 
 }  // end namespace uri

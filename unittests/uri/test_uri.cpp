@@ -1722,7 +1722,6 @@ TEST (PartsValid, AuthorityUserinfo) {
   EXPECT_EQ (p.valid (), uri::split (uri::compose (p)).has_value ());
 }
 
-#if URI_FUZZTEST
 template <typename T>
 class ro_sink_container {
 public:
@@ -1737,38 +1736,40 @@ private:
   std::size_t size_ = 0;
 };
 
-static std::size_t pct_encoded_size (std::string_view s) {
-  if (!uri::needs_pctencode (std::begin (s), std::end (s))) {
+static std::size_t pct_encoded_size (std::string_view s,
+                                     uri::pctencode_set encodeset) {
+  if (!uri::needs_pctencode (s, encodeset)) {
     return 0;
   }
   ro_sink_container<char> c;
-  uri::pctencode (std::begin(s), std::end (s), std::back_inserter (c));
+  uri::pctencode (std::begin (s), std::end (s), std::back_inserter (c),
+                  encodeset);
   return c.size ();
 }
 
 template <typename Function>
 void parts_strings (uri::parts & p, Function f) {
   if (p.scheme.has_value ()) {
-    p.scheme = f (*p.scheme);
+    p.scheme = f (*p.scheme, uri::pctencode_set::none);
   }
   for (auto & segment: p.path.segments) {
-    segment = f(segment);
+    segment = f (segment, uri::pctencode_set::path);
   }
   if (p.authority.has_value()) {
     auto & auth = *p.authority;
     if (auth.userinfo.has_value ()) {
-      auth.userinfo = f (*auth.userinfo);
+      auth.userinfo = f (*auth.userinfo, uri::pctencode_set::userinfo);
     }
-    auth.host = f (auth.host);
+    auth.host = f (auth.host, uri::pctencode_set::none);
     if (auth.port.has_value ()) {
-      auth.port = f (*auth.port);
+      auth.port = f (*auth.port, uri::pctencode_set::none);
     }
   }
   if (p.query.has_value ()) {
-    p.query = f (*p.query);
+    p.query = f (*p.query, uri::pctencode_set::query);
   }
   if (p.fragment.has_value ()) {
-    p.fragment = f (*p.fragment);
+    p.fragment = f (*p.fragment, uri::pctencode_set::fragment);
   }
 }
 
@@ -1777,14 +1778,18 @@ static uri::parts encode (std::vector<char> & store, uri::parts const & p) {
   store.clear ();
 
   std::size_t size = 0;
-  parts_strings (result, [&size] (std::string_view s) { size += pct_encoded_size (s); return s; });
+  parts_strings (result, [&size] (std::string_view s, uri::pctencode_set es) {
+    size += pct_encoded_size (s, es);
+    return s;
+  });
   store.reserve (size);
-  parts_strings (result, [&store] (std::string_view s) {
-    if (!uri::needs_pctencode (std::begin (s), std::end (s))) {
+  parts_strings (result, [&store] (std::string_view s, uri::pctencode_set es) {
+    if (!uri::needs_pctencode (s, es)) {
       return s;
     }
     auto first = std::end (store);
-    uri::pctencode (std::begin(s), std::end (s), std::back_inserter (store));
+    uri::pctencode (std::begin (s), std::end (s), std::back_inserter (store),
+                    es);
     auto last = std::end (store);
     assert (std::distance (first, last) > 0);
     return std::string_view{first, last};
@@ -1793,6 +1798,16 @@ static uri::parts encode (std::vector<char> & store, uri::parts const & p) {
   return result;
 }
 
+TEST (UriCompose, SplitAndValidAgree) {
+  parts_without_authority base;
+  authority auth;
+  std::vector<char> store;
+  uri::parts const p = encode (store, base.as_parts (auth));
+  std::string const str = uri::compose (p);
+  EXPECT_EQ (p.valid (), uri::split (str).has_value ());
+}
+
+#if 0  // URI_FUZZTEST
 static void SplitAndValidAlwaysAgree (parts_without_authority const& base,
                                       authority const& auth) {
   std::vector<char> store;
