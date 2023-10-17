@@ -1716,6 +1716,7 @@ TEST (UriCompose, Fragment) {
   EXPECT_EQ (uri::compose (p), expected);
   EXPECT_EQ (uri::split (expected), p);
 }
+// NOLINTNEXTLINE
 TEST (UriCompose, EmptyStrings) {
   uri::parts p;
   p.authority.emplace ();
@@ -1741,6 +1742,7 @@ static void SplitComposeEqual (std::string const& s) {
 FUZZ_TEST (UriCompose, SplitComposeEqual);
 #endif  // URI_FUZZTEST
 
+// NOLINTNEXTLINE
 TEST (PartsValid, Scheme) {
   uri::parts p;
   EXPECT_TRUE (p.valid ());
@@ -1750,6 +1752,7 @@ TEST (PartsValid, Scheme) {
   EXPECT_FALSE (p.valid ());
 }
 
+// NOLINTNEXTLINE
 TEST (PartsValid, AuthorityUserinfo) {
   using parts_authority = struct uri::parts::authority;
   uri::parts p;

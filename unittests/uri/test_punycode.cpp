@@ -17,6 +17,7 @@
 #include "fuzztest/fuzztest.h"
 #endif
 
+// NOLINTNEXTLINE
 TEST (Punycode, Delimiter) {
   auto const orig = std::u32string{0x002C, 0x002D, 0x1BC0};
   auto const encoded = ",--9cr";
@@ -27,6 +28,7 @@ TEST (Punycode, Delimiter) {
              uri::punycode::decode_result{orig});
 }
 
+// NOLINTNEXTLINE
 TEST (Punycode, ArabicEgyptian) {
   // Arabic (Egyptian)
   auto const arabic = std::u32string{
@@ -40,6 +42,7 @@ TEST (Punycode, ArabicEgyptian) {
              (uri::punycode::decode_result{arabic}));
 }
 
+// NOLINTNEXTLINE
 TEST (Punycode, ChineseSimplified) {
   // Chinese (simplified)
   auto const chinese_simplified = std::u32string{
@@ -52,6 +55,7 @@ TEST (Punycode, ChineseSimplified) {
              uri::punycode::decode_result{chinese_simplified});
 }
 
+// NOLINTNEXTLINE
 TEST (Punycode, ChineseTraditional) {
   // Chinese (traditional)
   auto const orig = std::u32string{0x4ED6, 0x5011, 0x7232, 0x4EC0, 0x9EBD,
@@ -63,6 +67,7 @@ TEST (Punycode, ChineseTraditional) {
              uri::punycode::decode_result{orig});
 }
 
+// NOLINTNEXTLINE
 TEST (Punycode, Czech) {
   // Czech: Pro<ccaron>prost<ecaron>nemluv<iacute><ccaron>esky
   auto const orig = std::u32string{
@@ -77,6 +82,7 @@ TEST (Punycode, Czech) {
              uri::punycode::decode_result{orig});
 }
 
+// NOLINTNEXTLINE
 TEST (Punycode, Hebrew) {
   auto const orig = std::u32string{
     0x05DC, 0x05DE, 0x05D4, 0x05D4, 0x05DD, 0x05E4, 0x05E9, 0x05D5,
@@ -90,6 +96,7 @@ TEST (Punycode, Hebrew) {
              uri::punycode::decode_result{orig});
 }
 
+// NOLINTNEXTLINE
 TEST (Punycode, HindiDevanagari) {
   auto const orig = std::u32string{
     0x092F, 0x0939, 0x0932, 0x094B, 0x0917, 0x0939, 0x093F, 0x0928,
@@ -104,6 +111,7 @@ TEST (Punycode, HindiDevanagari) {
              uri::punycode::decode_result{orig});
 }
 
+// NOLINTNEXTLINE
 TEST (Punycode, JapaneseKanjiAndHiragana) {
   auto const orig = std::u32string{
     0x306A, 0x305C, 0x307F, 0x3093, 0x306A, 0x65E5, 0x672C, 0x8A9E, 0x3092,
@@ -116,6 +124,7 @@ TEST (Punycode, JapaneseKanjiAndHiragana) {
              uri::punycode::decode_result{orig});
 }
 
+// NOLINTNEXTLINE
 TEST (Punycode, KoreanHangulSyllables) {
   auto const orig = std::u32string{
     0xC138, 0xACC4, 0xC758, 0xBAA8, 0xB4E0, 0xC0AC, 0xB78C, 0xB4E4,
@@ -130,6 +139,7 @@ TEST (Punycode, KoreanHangulSyllables) {
              uri::punycode::decode_result{orig});
 }
 
+// NOLINTNEXTLINE
 TEST (Punycode, RussianCyrillic) {
   auto const orig =
     std::u32string{0x043F, 0x043E, 0x0447, 0x0435, 0x043C, 0x0443, 0x0436,
@@ -144,6 +154,7 @@ TEST (Punycode, RussianCyrillic) {
              uri::punycode::decode_result{orig});
 }
 
+// NOLINTNEXTLINE
 TEST (Punycode, Spanish) {
   // Porqu<eacute>nopuedensimplementehablarenEspa<ntilde>ol
   auto const orig = std::u32string{
@@ -160,6 +171,7 @@ TEST (Punycode, Spanish) {
              uri::punycode::decode_result{orig});
 }
 
+// NOLINTNEXTLINE
 TEST (Punycode, Vietnamese) {
   // T<adotbelow>isaoh<odotbelow>kh<ocirc>ngth<ecirchookabove>ch
   // <ihookabove>n<oacute>iti<ecircacute>ngVi<ecircdotbelow>t
@@ -176,6 +188,7 @@ TEST (Punycode, Vietnamese) {
              uri::punycode::decode_result{orig});
 }
 
+// NOLINTNEXTLINE
 TEST (Punycode, ExampleL) {
   // 3<nen>B<gumi><kinpachi><sensei>
   auto const orig = std::u32string{0x0033, 0x5E74, 0x0042, 0x7D44,
@@ -188,6 +201,7 @@ TEST (Punycode, ExampleL) {
              uri::punycode::decode_result{orig});
 }
 
+// NOLINTNEXTLINE
 TEST (Punycode, ExampleM) {
   // <amuro><namie>-with-SUPER-MONKEYS
   auto const orig = std::u32string{
@@ -202,6 +216,7 @@ TEST (Punycode, ExampleM) {
              uri::punycode::decode_result{orig});
 }
 
+// NOLINTNEXTLINE
 TEST (Punycode, ExampleN) {
   // Hello-Another-Way-<sorezore><no><basho>
   auto const orig = std::u32string{
@@ -216,6 +231,7 @@ TEST (Punycode, ExampleN) {
              uri::punycode::decode_result{orig});
 }
 
+// NOLINTNEXTLINE
 TEST (Punycode, ExampleO) {
   // <hitotsu><yane><no><shita>2
   auto const orig = std::u32string{0x3072, 0x3068, 0x3064, 0x5C4B,
@@ -228,6 +244,7 @@ TEST (Punycode, ExampleO) {
              uri::punycode::decode_result{orig});
 }
 
+// NOLINTNEXTLINE
 TEST (Punycode, ExampleP) {
   // Maji<de>Koi<suru>5<byou><mae>
   auto const orig =
@@ -241,6 +258,7 @@ TEST (Punycode, ExampleP) {
              uri::punycode::decode_result{orig});
 }
 
+// NOLINTNEXTLINE
 TEST (Punycode, ExampleQ) {
   //  <pafii>de<runba>
   auto const orig = std::u32string{0x30D1, 0x30D5, 0x30A3, 0x30FC, 0x0064,
@@ -253,6 +271,7 @@ TEST (Punycode, ExampleQ) {
              uri::punycode::decode_result{orig});
 }
 
+// NOLINTNEXTLINE
 TEST (Punycode, ExampleR) {
   // <sono><supiido><de>
   auto const orig =
@@ -265,6 +284,7 @@ TEST (Punycode, ExampleR) {
              uri::punycode::decode_result{orig});
 }
 
+// NOLINTNEXTLINE
 TEST (Punycode, ExampleS) {
   // (S) -> $1.00 <-
   auto const orig =
