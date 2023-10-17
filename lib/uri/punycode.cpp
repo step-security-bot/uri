@@ -73,7 +73,7 @@ char const* error_category::name () const noexcept {
   return "punycode decode";
 }
 std::string error_category::message (int error) const {
-  auto m = "unknown error";
+  auto const* m = "unknown error";
   switch (static_cast<decode_error_code> (error)) {
   case decode_error_code::bad_input: m = "bad input"; break;
   case decode_error_code::overflow: m = "overflow"; break;
@@ -98,6 +98,7 @@ decode_result decode (std::string_view const& input) {
   // Find the end of the literal portion (if there is one) by scanning for the
   // last delimiter.
   auto rb = std::find (input.rbegin (), input.rend (), delimiter);
+  // NOLINTNEXTLINE(llvm-qualified-auto,readability-qualified-auto)
   auto b = rb == input.rend () ? input.begin () : rb.base () - 1;
   std::copy (input.begin (), b, std::back_inserter (output));
 
@@ -108,6 +109,7 @@ decode_result decode (std::string_view const& input) {
   // Start just after the last delimiter if any basic code points were
   // copied; start at the beginning otherwise. *in is the next character to be
   // consumed.
+  // NOLINTNEXTLINE(llvm-qualified-auto,readability-qualified-auto)
   auto in = b != input.begin () ? b + 1 : input.begin ();
   while (in != input.end ()) {
     // Decode a generalized variable-length integer into delta, which gets added
@@ -141,31 +143,3 @@ decode_result decode (std::string_view const& input) {
 }
 
 }  // end namespace uri::punycode
-
-#if 0
-  // Huge input stress test.
-  constexpr auto max = static_cast<std::u32string::size_type> (std::numeric_limits<std::uint_least32_t>::max ());
-  constexpr auto one = std::u32string::size_type{1};
-  std::u32string input;
-  input.reserve (max + one);
-  for (char32_t c = 0x0001; input.length () < max + one; ++c) {
-    input += c;
-  }
-  encode (input);
-#endif
-
-#if 0
-  char32_t cp = 0;
-  std::u32string in;
-  for (;;) {
-    auto const encoded = encode (in);
-    auto const decoded = decode (encoded);
-    assert (!std::holds_alternative<std::error_code>(decoded));
-    assert (std::get<1> (decoded) == in);
-
-//if (cp != delimiter) {
-    in += cp;
-//}
-    ++cp;
-  }
-#endif

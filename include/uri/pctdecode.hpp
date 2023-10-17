@@ -32,9 +32,7 @@
 
 #if defined(__cpp_lib_ranges) && __cpp_lib_ranges >= 201811L
 #include <ranges>
-#define URI_PCTDECODE_RANGES 1
-#else
-#define URI_PCTDECODE_RANGES 0
+#define URI_PCTDECODE_RANGES
 #endif
 
 namespace uri {
@@ -109,7 +107,7 @@ bool needs_pctdecode (InputIterator first, InputIterator last) {
   return std::find_if (first, last, [] (auto c) { return c == '%'; }) != last;
 }
 
-#if URI_PCTDECODE_RANGES
+#ifdef URI_PCTDECODE_RANGES
 template <std::ranges::input_range View>
   requires std::ranges::forward_range<View>
 class pctdecode_view
