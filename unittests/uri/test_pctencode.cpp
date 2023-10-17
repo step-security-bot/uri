@@ -51,7 +51,12 @@ TEST (PctEncode, CodePointNeedsEncodeExhaustive) {
   //
   // The C0 control percent-encode set are the C0 controls and all code points
   // greater than U+007E (~).
-  auto const is_c0 = [] (uint_least8_t c) { return c < 0x20 || c > 0x7E; };
+  auto const is_c0 = [] (uint_least8_t c) {
+    if (c == '%') {
+      return true;
+    }
+    return c < 0x20 || c > 0x7E;
+  };
   // The fragment percent-encode set is the C0 control percent-encode set and
   // U+0020 SPACE, U+0022 ("), U+003C (<), U+003E (>), and U+0060 (`).
   auto const is_fragment = [=] (uint_least8_t c) {
@@ -118,24 +123,25 @@ TEST (PctEncode, CodePointNeedsEncodeExhaustive) {
 }
 
 #if URI_FUZZTEST
-static void pctencode_never_crashes (std::string const& s,
-                                     uri::pctencode_set encodeset) {
+static void EncodeNeverCrashes (std::string const& s,
+                                uri::pctencode_set encodeset) {
   std::string encoded;
   uri::pctencode (std::begin (s), std::end (s), std::back_inserter (encoded),
                   encodeset);
 }
-static auto any_encode_set () {
+static auto AnyEncodeSet () {
   return fuzztest::ElementOf<uri::pctencode_set> (
     {uri::pctencode_set::fragment, uri::pctencode_set::query,
      uri::pctencode_set::special_query, uri::pctencode_set::path,
      uri::pctencode_set::userinfo, uri::pctencode_set::component,
      uri::pctencode_set::form_urlencoded});
 }
-FUZZ_TEST (PctEncodeFuzz, pctencode_never_crashes)
-  .WithDomains (fuzztest::String (), any_encode_set ());
+FUZZ_TEST (PctEncodeFuzz, EncodeNeverCrashes)
+  .WithDomains (fuzztest::String (), AnyEncodeSet ());
+#endif  // URI_FUZZTEST
 
-static void pctcodec_equals_original (std::string const& s,
-                                      uri::pctencode_set encodeset) {
+#if URI_FUZZTEST
+static void RoundTrip (std::string const& s, uri::pctencode_set encodeset) {
   std::string encoded;
   uri::pctencode (std::begin (s), std::end (s), std::back_inserter (encoded),
                   encodeset);
@@ -146,6 +152,6 @@ static void pctcodec_equals_original (std::string const& s,
 
   EXPECT_THAT (out, testing::StrEq (s));
 }
-FUZZ_TEST (PctEncodeFuzz, pctcodec_equals_original)
-  .WithDomains (fuzztest::String (), any_encode_set ());
+FUZZ_TEST (PctEncodeFuzz, RoundTrip)
+  .WithDomains (fuzztest::String (), AnyEncodeSet ());
 #endif  // URI_FUZZTEST

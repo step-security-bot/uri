@@ -36,7 +36,7 @@ bool needs_pctencode (std::uint_least8_t c, pctencode_set es) noexcept {
     0b0111'1111,  // U+0022 QUOTATION MARK
     0b0111'1110,  // U+0023 NUMBER SIGN
     0b0110'0000,  // U+0024 DOLLAR SIGN
-    0b0110'0000,  // U+0025 PERCENT SIGN
+    0b1111'1111,  // U+0025 PERCENT SIGN
     0b0110'0000,  // U+0026 AMPERSAND
     0b0100'0100,  // U+0027 APOSTROPHE
     0b0100'0000,  // U+0028 LEFT PARENTHESIS
