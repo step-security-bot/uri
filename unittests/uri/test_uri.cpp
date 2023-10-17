@@ -1766,7 +1766,9 @@ class ro_sink_container {
 public:
   using value_type = T;
 
+  // NOLINTNEXTLINE(hicpp-named-parameter,readability-named-parameter)
   void push_back (T const&) noexcept { ++size_; }
+  // NOLINTNEXTLINE(hicpp-named-parameter,readability-named-parameter)
   void push_back (T&&) noexcept { ++size_; }
   [[nodiscard]] std::size_t size () const noexcept { return size_; }
   [[nodiscard]] bool empty () const noexcept { return size_ == 0; }
