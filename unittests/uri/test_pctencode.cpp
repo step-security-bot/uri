@@ -10,15 +10,15 @@
 // See https://github.com/paulhuggett/uri/blob/main/LICENSE for information.
 // SPDX-License-Identifier: MIT
 //===----------------------------------------------------------------------===//
+#include "uri/pctdecode.hpp"
+#include "uri/pctencode.hpp"
+
 #include <iterator>
 #include <limits>
 #include <numeric>
 #include <string_view>
 
 #include "gmock/gmock.h"
-#include "gtest/gtest.h"
-#include "uri/pctdecode.hpp"
-#include "uri/pctencode.hpp"
 
 #if URI_FUZZTEST
 #include "fuzztest/fuzztest.h"
@@ -44,6 +44,7 @@ TEST (PctEncode, Percent) {
   EXPECT_EQ (out, "H%25llo");
 }
 
+// NOLINTNEXTLINE
 TEST (PctEncode, CodePointNeedsEncodeExhaustive) {
   using std::uint_least8_t;
 
