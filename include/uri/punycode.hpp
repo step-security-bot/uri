@@ -64,11 +64,22 @@ constexpr char encode_digit (std::string::size_type d) noexcept {
   return static_cast<char> (d + 22U + 75U * (d < 26U));
 }
 
+constexpr std::string::size_type clamp (std::string::size_type k,
+                                        std::string::size_type bias) {
+  if (k <= bias) {
+    return tmin;
+  }
+  if (k >= bias + tmax) {
+    return tmax;
+  }
+  return k - bias;
+}
+
 template <typename OutputIterator>
 OutputIterator encode_vli (std::string::size_type q,
                            std::string::size_type bias, OutputIterator out) {
   for (auto k = base;; k += base) {
-    auto const t = k <= bias ? tmin : k >= bias + tmax ? tmax : k - bias;
+    auto const t = clamp (k, bias);
     if (q < t) {
       break;
     }
