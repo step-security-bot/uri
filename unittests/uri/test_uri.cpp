@@ -1641,7 +1641,7 @@ struct parts_without_authority {
   std::optional<std::string> query;
   std::optional<std::string> fragment;
 
-  uri::parts as_parts (
+  [[nodiscard]] uri::parts as_parts (
     std::optional<struct uri::parts::authority> const& authority) const {
     return uri::parts{scheme, authority, path, query, fragment};
   }
