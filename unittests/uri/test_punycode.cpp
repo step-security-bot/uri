@@ -310,3 +310,19 @@ static void DecodeNeverCrashes (std::string const& s) {
 }
 FUZZ_TEST (Punycode, DecodeNeverCrashes);
 #endif  // URI_FUZZTEST
+
+#if URI_FUZZTEST
+inline constexpr auto max_code_point = char32_t{0x10FFFF};
+static auto UnicodeCodePoint () {
+  return fuzztest::InRange<char32_t> (0x0000, max_code_point);
+}
+static auto U32String () {
+  return fuzztest::ContainerOf<std::u32string> (UnicodeCodePoint ());
+}
+static void RoundTrip (std::u32string const& s) {
+  std::string encoded;
+  uri::punycode::encode (s, std::back_inserter (encoded));
+  EXPECT_EQ (uri::punycode::decode (encoded), uri::punycode::decode_result{s});
+}
+FUZZ_TEST (Punycode, RoundTrip).WithDomains (U32String ());
+#endif  // URI_FUZZTEST
