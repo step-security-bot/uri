@@ -50,7 +50,6 @@ constexpr auto initial_n = std::string::size_type{0x80};
 constexpr auto delimiter = char{0x2D};
 
 constexpr bool is_basic_code_point (char32_t c) noexcept {
-  // return c >= 0x20 && c <= 0x7E;
   return c <= 0x7F;
 }
 
